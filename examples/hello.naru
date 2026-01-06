@@ -1,0 +1,7 @@
+--- Hello World in NarutoScript
+
+jutsu message = `Hello, NarutoScript!`
+say(message)
+
+jutsu name = `Naruto`
+say(`Welcome, {name}!`)
