@@ -1,364 +1,384 @@
 # NarutoScript
 
-NarutoScript is a small programming language with anime flavored syntax.
-It now has a real lexer. parser. interpreter. CLI. REPL. examples. and release workflow.
+A programming language for Naruto fans. Anime-flavored syntax, immutable bindings, first-class functions, pattern matching.
 
-If you want the full language details. read [SPECIFICATION.md](/Users/tigerabrodi/Desktop/narutoscript/SPECIFICATION.md).
+```
+jutsu name = `Naruto`
+say(`Believe it, {name}!`)
+```
 
-## 1. Get NarutoScript
-
-### Option A. Download a release binary
-
-When you publish a tag like `v0.1.0`. the release workflow builds compiled binaries for these targets.
-
-- Linux x64
-- Linux arm64
-- macOS x64
-- macOS arm64
-- Windows x64
-
-Each release archive includes the `narutoscript` binary. this README. and the example `.naru` programs.
-
-Basic install flow on macOS or Linux.
+## Install
 
 ```bash
-tar -xzf narutoscript-v0.1.0-linux-x64.tar.gz
-chmod +x narutoscript
-./narutoscript --help
+npm install -g narutoscript
 ```
 
-Basic install flow on Windows.
-
-```powershell
-Expand-Archive narutoscript-v0.1.0-windows-x64.zip
-.\narutoscript.exe --help
-```
-
-### Option B. Run from source with Bun
+Or run without installing:
 
 ```bash
-bun install
-bun run src/index.ts --help
+npx narutoscript examples/hello.naru
 ```
 
-## 2. Run something immediately
+## Quick start
 
-Run the hello world example.
+### Run a file
 
 ```bash
-bun run src/index.ts examples/hello.naru
+narutoscript hello.naru
 ```
 
-Or with the explicit command form.
+### Start the REPL
 
 ```bash
-bun run src/index.ts run examples/hello.naru
+narutoscript
 ```
 
-List the bundled example programs.
-
-```bash
-bun run src/index.ts examples
 ```
-
-## 3. Start the REPL
-
-```bash
-bun run src/index.ts
-```
-
-Or.
-
-```bash
-bun run src/index.ts repl
-```
-
-Useful REPL commands.
-
-```text
-:help
-:examples
-:builtins
-:env
-:type <expression>
-:load <file>
-:reset
-exit
-```
-
-Simple REPL session.
-
-```text
+NarutoScript v0.1.0 REPL
+Type :help for REPL commands. Type exit to quit.
 naru> jutsu name = `Naruto`
 naru> say(`Hello {name}`)
 Hello Naruto
-naru> :type [1, 2, 3]
+naru> jutsu numbers = [1, 2, 3]
+naru> clone(numbers, (n) -> n * 2)
+[2, 4, 6]
+naru> :type numbers
 list
+naru> exit
 ```
 
-## 4. Write your first file
+### REPL commands
 
-Create a file named `hello.naru`.
+| Command        | What it does                           |
+| -------------- | -------------------------------------- |
+| `:help`        | Show help text                         |
+| `:examples`    | List bundled example programs          |
+| `:builtins`    | List all builtin functions             |
+| `:env`         | Show current user bindings             |
+| `:type <expr>` | Show the runtime type of an expression |
+| `:load <file>` | Load a `.naru` file into the session   |
+| `:reset`       | Clear all bindings and start fresh     |
+| `exit`         | Leave the REPL                         |
 
-```text
-say(`Believe it`)
-
-jutsu name = `Naruto`
-say(`Welcome, {name}!`)
-```
-
-Run it.
-
-```bash
-bun run src/index.ts hello.naru
-```
-
-## 5. Learn the language in order
+## Learn the language
 
 ### Comments
 
-```text
+```
 --- This is a comment
+--- Comments start with three dashes
 ```
 
 ### Values
 
-```text
-42
-3.14
-`hello`
-true
-false
-poof
-```
+| Type     | Example                             |
+| -------- | ----------------------------------- |
+| Number   | `42`, `3.14`                        |
+| String   | `` `hello` ``, `` `Hello {name}` `` |
+| Boolean  | `true`, `false`                     |
+| Nothing  | `poof`                              |
+| List     | `[1, 2, 3]`                         |
+| Object   | `{ name: `Naruto`, power: 9000 }`   |
+| Function | `(x) -> x * 2`                      |
+| Result   | `victory(value)`, `defeat(reason)`  |
 
 ### Bindings
 
-Use `jutsu` to bind a value.
+`jutsu` binds a value to a name. Bindings are immutable.
 
-```text
+```
 jutsu name = `Naruto`
 jutsu age = 16
+jutsu nothing = poof
 ```
 
-Bindings are immutable. shadowing creates a new binding.
+Shadowing is allowed (rebinding creates a new binding):
 
-```text
-jutsu power = 9000
-jutsu power = power + 1
+```
+jutsu x = 5
+jutsu x = x + 1  --- x is now 6
 ```
 
 ### Strings and interpolation
 
-Strings use backticks.
+Strings use backticks and support `{expression}` interpolation:
 
-```text
-jutsu village = `Leaf`
-jutsu line = `Welcome to {village}`
+```
+jutsu village = `Konoha`
+jutsu greeting = `Welcome to {village}!`
+jutsu math = `Two plus two is {2 + 2}`
 ```
 
 ### Functions
 
-Single expression.
+Single expression (implicit return):
 
-```text
+```
 jutsu double = (x) -> x * 2
+jutsu add = (x, y) -> x + y
 ```
 
-Block body.
+Block body (last expression is the return value):
 
-```text
+```
 jutsu process = (x) -> {
   jutsu doubled = x * 2
-  doubled + 1
+  jutsu tripled = x * 3
+  doubled + tripled
 }
 ```
 
-Early return.
+Early return with `dattebayo`:
 
-```text
-jutsu safe = (n) -> {
-  when n < 0 {
-    dattebayo defeat(`negative`)
+```
+jutsu safeDivide = (a, b) -> {
+  when b == 0 {
+    dattebayo defeat(`cannot divide by zero`)
   }
-  dattebayo victory(n)
+  dattebayo victory(a / b)
 }
 ```
 
 ### Lists
 
-```text
-jutsu numbers = [1, 2, 3]
+```
+jutsu numbers = [1, 2, 3, 4, 5]
 jutsu empty = []
+jutsu nested = [[1, 2], [3, 4]]
 ```
 
 ### Objects
 
-```text
+```
 jutsu ninja = {
   name: `Naruto`,
+  village: `Konoha`,
   power: 9000
 }
 
 say(ninja.name)
 
+--- Copy with modifications using spread
 jutsu stronger = { ...ninja, power: 9001 }
 ```
 
 ### Conditionals
 
-```text
-when true {
-  say(`yes`)
+```
+when power > 9000 {
+  say(`Incredible power!`)
+}
+
+when hungry {
+  eat()
 } otherwise {
-  say(`no`)
+  train()
+}
+```
+
+Logical operators: `and`, `or`, `nani` (not)
+
+```
+when strong and fast {
+  win()
+}
+
+when nani ready {
+  prepare()
 }
 ```
 
 ### Loops
 
-```text
-train n in [1, 2, 3] {
-  say(n)
+`train` iterates over a list:
+
+```
+jutsu names = [`Naruto`, `Sasuke`, `Sakura`]
+
+train name in names {
+  say(`Hello {name}`)
 }
 ```
 
 ### Pattern matching
 
-Use `read` to match values.
+`read` matches values against patterns:
 
-```text
-read victory(42) {
-  victory(n) -> say(`Answer {n}`)
-  defeat(reason) -> say(`Error {reason}`)
+```
+--- Match literals
+read age {
+  0 -> `baby`
+  _ -> `not a baby`
+}
+
+--- Match with guards
+read power {
+  p when p > 8500 -> `Legendary`
+  p when p > 7500 -> `Elite`
+  p when p > 6000 -> `Strong`
+  _ -> `Developing`
+}
+
+--- Match results
+jutsu result = safeDivide(10, 2)
+
+read result {
+  victory(n) -> say(`Answer: {n}`)
+  defeat(e) -> say(`Error: {e}`)
+}
+
+--- Match objects
+read ninja {
+  { rank: `Hokage` } -> `Leader of the village`
+  { village: `Konoha` } -> `Leaf ninja`
+  _ -> `Unknown`
+}
+
+--- Match lists
+read myList {
+  [] -> `empty`
+  [single] -> `just one`
+  [head, ...tail] -> `starts with {head}`
 }
 ```
 
-### Results
+### Error handling with Results
 
-```text
-victory(`ok`)
-defeat(`bad`)
+Functions return `victory(value)` or `defeat(reason)` instead of throwing:
+
+```
+jutsu safeDivide = (a, b) -> {
+  when b == 0 {
+    dattebayo defeat(`cannot divide by zero`)
+  }
+  dattebayo victory(a / b)
+}
+
+read safeDivide(10, 0) {
+  victory(n) -> say(`Got {n}`)
+  defeat(err) -> say(`Error: {err}`)
+}
 ```
 
-## 6. Builtin functions
+## Builtin functions
 
-### `say(value) -> poof`
+| Function  | Signature                             | Description        |
+| --------- | ------------------------------------- | ------------------ |
+| `say`     | `say(value) -> poof`                  | Print a value      |
+| `clone`   | `clone(list, fn) -> list`             | Map over a list    |
+| `pick`    | `pick(list, fn) -> list`              | Filter a list      |
+| `combine` | `combine(list, fn, initial) -> value` | Reduce a list      |
+| `length`  | `length(list) -> number`              | Get list length    |
+| `type`    | `type(value) -> string`               | Get type as string |
 
-Print a value.
+```
+jutsu numbers = [1, 2, 3, 4, 5]
 
-```text
-say(`Hello`)
+jutsu doubled = clone(numbers, (n) -> n * 2)
+--- [2, 4, 6, 8, 10]
+
+jutsu evens = pick(numbers, (n) -> n % 2 == 0)
+--- [2, 4]
+
+jutsu sum = combine(numbers, (acc, n) -> acc + n, 0)
+--- 15
+
+say(length(numbers))
+--- 5
+
+say(type(42))
+--- number
 ```
 
-### `clone(list, fn) -> list`
+## Keywords
 
-Map over a list.
-
-```text
-clone([1, 2, 3], (n) -> n * 2)
+```
+jutsu, when, otherwise, train, in, dattebayo, read,
+victory, defeat, and, or, nani, true, false, poof
 ```
 
-### `pick(list, fn) -> list`
+## CLI reference
 
-Filter a list.
-
-```text
-pick([1, 2, 3, 4], (n) -> n % 2 == 0)
+```
+narutoscript <file>           Run a .naru file
+narutoscript run <file>       Run a .naru file (explicit)
+narutoscript repl             Start the REPL
+narutoscript examples         List bundled examples
+narutoscript --help           Show help
+narutoscript --version        Show version
 ```
 
-### `combine(list, fn, initial) -> value`
+## Example programs
 
-Reduce a list.
+Three examples are bundled:
 
-```text
-combine([1, 2, 3], (acc, n) -> acc + n, 0)
+**hello.naru** — Hello world
+
+```
+--- Hello World in NarutoScript
+
+jutsu message = `Hello, NarutoScript!`
+say(message)
+
+jutsu name = `Naruto`
+say(`Welcome, {name}!`)
 ```
 
-### `length(list) -> number`
+**ninja-power-calculator.naru** — Lists, objects, reduce
 
-```text
-length([1, 2, 3])
+```
+jutsu ninjas = [
+  { name: `Naruto`, power: 9000 },
+  { name: `Sasuke`, power: 8500 },
+  { name: `Sakura`, power: 7800 }
+]
+
+jutsu totalPower = combine(ninjas, (acc, ninja) -> acc + ninja.power, 0)
+say(`Total power is {totalPower}`)
 ```
 
-### `type(value) -> string`
+**all-features.naru** — Spread, map, filter, pattern matching, loops
 
-```text
-type(42)
-type(`Naruto`)
-type([1, 2, 3])
+```
+jutsu warriors = [
+  { name: `Naruto`, power: 9000 },
+  { name: `Sakura`, power: 7800 },
+  { name: `Konohamaru`, power: 4200 }
+]
+
+jutsu boosted = clone(warriors, (warrior) -> {
+  { ...warrior, power: warrior.power + 500 }
+})
+
+jutsu elites = pick(boosted, (warrior) -> warrior.power >= 8000)
+
+jutsu classify = (warrior) -> when warrior.power >= 9500 {
+  victory({ name: warrior.name, label: `legendary` })
+} otherwise {
+  defeat({ name: warrior.name, label: `rising` })
+}
+
+say(`Elite count {length(elites)}`)
+
+train warrior in elites {
+  read classify(warrior) {
+    victory({ name: name, label: label }) -> say(`{name} is {label}`)
+    defeat({ name: name, label: label }) -> say(`{name} is {label}`)
+  }
+}
+
+say(`Elite total {combine(elites, (acc, warrior) -> acc + warrior.power, 0)}`)
 ```
 
-## 7. CLI reference
-
-Packaged command form.
-
-```bash
-narutoscript <file>
-narutoscript run <file>
-narutoscript repl
-narutoscript examples
-narutoscript --help
-```
-
-Bun form.
-
-```bash
-bun run src/index.ts <file>
-bun run src/index.ts run <file>
-bun run src/index.ts repl
-bun run src/index.ts examples
-bun run src/index.ts --help
-```
-
-## 8. Example programs
-
-Included examples.
-
-- `examples/hello.naru`
-- `examples/ninja-power-calculator.naru`
-- `examples/all-features.naru`
-
-Try them.
-
-```bash
-bun run src/index.ts examples/hello.naru
-bun run src/index.ts examples/ninja-power-calculator.naru
-bun run src/index.ts examples/all-features.naru
-```
-
-## 9. Release workflow
-
-The GitHub workflow at `.github/workflows/release.yml` does this.
-
-1. Runs `bun ci`
-2. Runs `bun tsc`
-3. Runs `bun lint`
-4. Runs `bun test`
-5. Compiles standalone binaries with `bun build --compile`
-6. Packages archives and checksums
-7. Publishes them to a GitHub release for version tags like `v0.1.0`
-
-## 10. Local development
-
-Install dependencies.
+## Development
 
 ```bash
 bun install
-```
-
-Run the full check loop.
-
-```bash
-bun run format
+bun test
 bun tsc
 bun lint
-bun test
+bun run format
 ```
 
-Build a local compiled binary for your current machine.
-
-```bash
-bun run build:compile
-./dist/narutoscript --help
-```
+Full development plan and phase breakdown in [DEVELOPMENT.md](./DEVELOPMENT.md).
+Language specification in [SPECIFICATION.md](SPECIFICATION.md).
