@@ -1,0 +1,30 @@
+--- NarutoScript all features example
+
+jutsu warriors = [
+  { name: `Naruto`, power: 9000 },
+  { name: `Sakura`, power: 7800 },
+  { name: `Konohamaru`, power: 4200 }
+]
+
+jutsu boosted = clone(warriors, (warrior) -> {
+  { ...warrior, power: warrior.power + 500 }
+})
+
+jutsu elites = pick(boosted, (warrior) -> warrior.power >= 8000)
+
+jutsu classify = (warrior) -> when warrior.power >= 9500 {
+  victory({ name: warrior.name, label: `legendary` })
+} otherwise {
+  defeat({ name: warrior.name, label: `rising` })
+}
+
+say(`Elite count {length(elites)}`)
+
+train warrior in elites {
+  read classify(warrior) {
+    victory({ name: name, label: label }) -> say(`{name} is {label}`)
+    defeat({ name: name, label: label }) -> say(`{name} is {label}`)
+  }
+}
+
+say(`Elite total {combine(elites, (acc, warrior) -> acc + warrior.power, 0)}`)

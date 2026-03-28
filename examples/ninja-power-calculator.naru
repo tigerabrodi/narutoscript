@@ -1,0 +1,10 @@
+--- Ninja Power Calculator
+
+jutsu ninjas = [
+  { name: `Naruto`, power: 9000 },
+  { name: `Sasuke`, power: 8500 },
+  { name: `Sakura`, power: 7800 }
+]
+
+jutsu totalPower = combine(ninjas, (acc, ninja) -> acc + ninja.power, 0)
+say(`Total power is {totalPower}`)
