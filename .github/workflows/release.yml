@@ -1,0 +1,144 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing git tag to release. Example. v0.1.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+  CHECKOUT_REF: ${{ github.event.inputs.tag || github.ref }}
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Typecheck
+        run: bun tsc
+
+      - name: Lint
+        run: bun lint
+
+      - name: Test
+        run: bun test
+
+  build:
+    name: Build ${{ matrix.label }}
+    needs: verify
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: linux-x64
+            target: bun-linux-x64-baseline
+            executable: narutoscript
+            archive: tar.gz
+          - label: linux-arm64
+            target: bun-linux-arm64
+            executable: narutoscript
+            archive: tar.gz
+          - label: macos-x64
+            target: bun-darwin-x64-baseline
+            executable: narutoscript
+            archive: tar.gz
+          - label: macos-arm64
+            target: bun-darwin-arm64
+            executable: narutoscript
+            archive: tar.gz
+          - label: windows-x64
+            target: bun-windows-x64-baseline
+            executable: narutoscript.exe
+            archive: zip
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Prepare release folders
+        run: mkdir -p build dist "package/${{ matrix.label }}/examples"
+
+      - name: Build compiled binary
+        run: bun build --compile --minify --sourcemap ./src/index.ts --outfile "./build/${{ matrix.executable }}" --target="${{ matrix.target }}"
+
+      - name: Stage release files
+        run: |
+          cp "./build/${{ matrix.executable }}" "./package/${{ matrix.label }}/${{ matrix.executable }}"
+          cp README.md "./package/${{ matrix.label }}/README.md"
+          cp examples/*.naru "./package/${{ matrix.label }}/examples/"
+          if [ "${{ matrix.archive }}" = "tar.gz" ]; then
+            chmod +x "./package/${{ matrix.label }}/${{ matrix.executable }}"
+          fi
+
+      - name: Package release archive
+        run: |
+          asset="narutoscript-${RELEASE_TAG}-${{ matrix.label }}"
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            (
+              cd "./package/${{ matrix.label }}"
+              zip -r "../../dist/${asset}.zip" .
+            )
+            sha256sum "./dist/${asset}.zip" > "./dist/${asset}.zip.sha256"
+          else
+            tar -czf "./dist/${asset}.tar.gz" -C "./package/${{ matrix.label }}" .
+            sha256sum "./dist/${asset}.tar.gz" > "./dist/${asset}.tar.gz.sha256"
+          fi
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" release-assets/* --clobber
+          else
+            gh release create "${RELEASE_TAG}" release-assets/* --verify-tag --title "${RELEASE_TAG}" --generate-notes
+          fi

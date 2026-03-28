@@ -9,6 +9,7 @@
   "scripts": {
     "test": "bun test",
     "dev": "bun run src/index.ts",
+    "build:compile": "bun build --compile --minify --sourcemap ./src/index.ts --outfile ./dist/narutoscript",
     "tsc": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write ."
