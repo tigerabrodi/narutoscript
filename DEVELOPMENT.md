@@ -2,20 +2,87 @@
 
 ## Overview
 
-Building NarutoScript in TypeScript with TDD using Bun.
+Building NarutoScript in TypeScript with strict TDD using Bun.
+
+## TDD Workflow (Strict)
+
+Every feature follows this exact cycle — no exceptions:
+
+1. **Write test** — describe the expected behavior
+2. **See it fail** — `bun test` must show a red failure
+3. **Write code** — minimal implementation to make it pass
+4. **See it pass** — `bun test` must go green
+5. **Repeat** — next test
+
+No mocks needed anywhere. We own the entire stack:
+
+- **Lexer tests**: string in → tokens out
+- **Parser tests**: string in → AST out (uses the real lexer)
+- **Interpreter tests**: full program string in → output out (uses real lexer + parser)
+
+```bash
+# Run all tests
+bun test
+
+# Run tests in watch mode
+bun test --watch
+
+# Run a specific test file
+bun test tests/lexer.test.ts
+```
+
+---
+
+## Parallelism & Dependencies
+
+The phases have a dependency chain. Some can run in parallel when they share
+no dependencies. Phases that touch the same file (e.g. `interpreter.ts`) need
+isolated worktrees to avoid merge conflicts.
+
+```
+SEQUENTIAL — must be done in order, each depends on the previous:
+
+  Phase 1 (Lexer)
+      ↓
+  Phase 2 (Parser)
+      ↓
+  Phase 3 (Interpreter Core)
+
+PARALLEL BLOCK A — all three need Phase 3 done, but are independent of each other:
+
+  ┌─ Phase 4 (Control Flow)
+  ├─ Phase 5 (Data Structures)
+  └─ Phase 8 (String Interpolation)
+
+PARALLEL BLOCK B — both need Phase 5 done, but are independent of each other:
+
+  ┌─ Phase 6 (Pattern Matching)
+  └─ Phase 7 (Builtins)
+
+SEQUENTIAL — needs everything above:
+
+  Phase 9 (Integration & Polish)
+```
+
+**Why worktrees matter for parallel blocks:** Phases in the same parallel block
+all modify `interpreter.ts` and `tests/interpreter.test.ts`. Each agent should
+work in an isolated worktree so their changes don't conflict. Merge after each
+block is complete.
+
+---
 
 ## Project Structure
 
 ```
 narutoscript/
   src/
-    lexer.ts
-    parser.ts
-    ast.ts
-    interpreter.ts
-    builtins.ts
-    errors.ts
-    index.ts
+    lexer.ts          ← Phase 1
+    ast.ts            ← Phase 2
+    parser.ts         ← Phase 2
+    interpreter.ts    ← Phases 3-8
+    builtins.ts       ← Phase 7
+    errors.ts         ← All phases
+    index.ts          ← Phase 9
   tests/
     lexer.test.ts
     parser.test.ts
@@ -30,7 +97,9 @@ narutoscript/
 
 ---
 
-## Phase 1: Lexer
+## Phase 1: Lexer (Sequential — no deps)
+
+**Files:** `src/lexer.ts`, `tests/lexer.test.ts`
 
 Turn source code into tokens.
 
@@ -88,9 +157,11 @@ type Token = {
 
 ---
 
-## Phase 2: Parser
+## Phase 2: Parser (Sequential — needs Phase 1)
 
-Turn tokens into AST.
+**Files:** `src/parser.ts`, `src/ast.ts`, `tests/parser.test.ts`
+
+Turn tokens into AST. Tests use the real lexer — no mocks.
 
 ### AST Node Types
 
@@ -125,7 +196,7 @@ type ASTNode =
 ### Tests to Write
 
 ```typescript
-// parser.test.ts
+// parser.test.ts — all tests feed source strings through the real lexer
 - parses number literal
 - parses string literal
 - parses boolean literals (true/false)
@@ -172,9 +243,11 @@ type ASTNode =
 
 ---
 
-## Phase 3: Interpreter (Core)
+## Phase 3: Interpreter Core (Sequential — needs Phase 2)
 
-Evaluate AST nodes.
+**Files:** `src/interpreter.ts`, `tests/interpreter.test.ts`
+
+Evaluate AST nodes. Tests feed full source strings through lexer + parser — no mocks.
 
 ### Environment
 
@@ -203,7 +276,7 @@ type Value =
 ### Tests to Write
 
 ```typescript
-// interpreter.test.ts (core)
+// interpreter.test.ts (core) — all tests feed source strings through the full pipeline
 - evaluates number literal
 - evaluates string literal
 - evaluates boolean literals
@@ -225,7 +298,11 @@ type Value =
 
 ---
 
-## Phase 4: Interpreter (Control Flow)
+## Phase 4: Control Flow (Parallel Block A — needs Phase 3)
+
+**Files:** `src/interpreter.ts`, `tests/interpreter.test.ts`
+**Parallel with:** Phase 5, Phase 8
+**Worktree required:** Yes (shares files with 5 and 8)
 
 ### Tests to Write
 
@@ -243,7 +320,11 @@ type Value =
 
 ---
 
-## Phase 5: Interpreter (Data Structures)
+## Phase 5: Data Structures (Parallel Block A — needs Phase 3)
+
+**Files:** `src/interpreter.ts`, `tests/interpreter.test.ts`
+**Parallel with:** Phase 4, Phase 8
+**Worktree required:** Yes (shares files with 4 and 8)
 
 ### Tests to Write
 
@@ -262,7 +343,11 @@ type Value =
 
 ---
 
-## Phase 6: Interpreter (Pattern Matching)
+## Phase 6: Pattern Matching (Parallel Block B — needs Phase 5)
+
+**Files:** `src/interpreter.ts`, `tests/interpreter.test.ts`
+**Parallel with:** Phase 7
+**Worktree required:** Yes (shares files with 7)
 
 ### Tests to Write
 
@@ -290,13 +375,17 @@ type Value =
 
 ---
 
-## Phase 7: Builtins
+## Phase 7: Builtins (Parallel Block B — needs Phase 5)
+
+**Files:** `src/builtins.ts`, `src/interpreter.ts`, `tests/interpreter.test.ts`
+**Parallel with:** Phase 6
+**Worktree required:** Yes (shares files with 6)
 
 ### Tests to Write
 
 ```typescript
 // interpreter.test.ts (builtins)
-- say() outputs value (mock/capture output)
+- say() outputs value (capture stdout)
 - clone() maps function over list
 - clone() with empty list
 - pick() filters list by predicate
@@ -316,7 +405,11 @@ type Value =
 
 ---
 
-## Phase 8: String Interpolation
+## Phase 8: String Interpolation (Parallel Block A — needs Phase 3)
+
+**Files:** `src/lexer.ts`, `src/parser.ts`, `src/interpreter.ts`, `tests/lexer.test.ts`, `tests/parser.test.ts`, `tests/interpreter.test.ts`
+**Parallel with:** Phase 4, Phase 5
+**Worktree required:** Yes (shares files with 4 and 5)
 
 ### Tests to Write
 
@@ -337,7 +430,9 @@ type Value =
 
 ---
 
-## Phase 9: Integration & Polish
+## Phase 9: Integration & Polish (Sequential — needs everything)
+
+**Files:** `src/index.ts`, `tests/integration.test.ts`
 
 ### Tests to Write
 
@@ -353,10 +448,11 @@ type Value =
 ### Polish Tasks
 
 - [ ] REPL implementation
-- [ ] File runner (narutoscript run file.naru)
+- [ ] File runner (`narutoscript run file.naru`)
 - [ ] Improve error messages
 - [ ] Add more example programs
 - [ ] Documentation
+- [ ] Distribution (npm publish / GitHub releases with `bun build --compile`)
 
 ---
 
@@ -366,15 +462,18 @@ type Value =
 # Install dependencies
 bun install
 
-# Run tests
+# Run all tests
 bun test
 
 # Run tests in watch mode
 bun test --watch
 
-# Run a file
+# Run a specific test file
+bun test tests/lexer.test.ts
+
+# Run a .naru file
 bun run src/index.ts examples/hello.naru
 
-# Start REPL
+# Start REPL (Phase 9)
 bun run src/index.ts
 ```
