@@ -146,7 +146,7 @@ export function createBuiltins({
   ]
 }
 
-function renderValue(value: Value): string {
+export function renderValue(value: Value): string {
   switch (value.type) {
     case 'number':
       return String(value.value)

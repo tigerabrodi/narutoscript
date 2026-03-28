@@ -12,6 +12,7 @@ export type Expression =
   | UnaryExpr
   | NumberLiteral
   | StringLiteral
+  | InterpolatedString
   | BooleanLiteral
   | PoofLiteral
   | Identifier
@@ -34,6 +35,23 @@ export type NumberLiteral = {
 export type StringLiteral = {
   type: 'StringLiteral'
   value: string
+}
+
+export type InterpolatedString = {
+  type: 'InterpolatedString'
+  parts: StringPart[]
+}
+
+export type StringPart = StringText | Interpolation
+
+export type StringText = {
+  type: 'StringText'
+  value: string
+}
+
+export type Interpolation = {
+  type: 'Interpolation'
+  expression: Expression
 }
 
 export type BooleanLiteral = {

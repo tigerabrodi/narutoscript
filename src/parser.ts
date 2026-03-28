@@ -8,6 +8,7 @@ import type {
   FunctionExpr,
   Identifier,
   IdentifierPattern,
+  InterpolatedString,
   JutsuBinding,
   ListPattern,
   MatchArm,
@@ -18,6 +19,7 @@ import type {
   Program,
   ReadExpr,
   Statement,
+  StringPart,
   TrainLoop,
   VictoryExpr,
   WhenExpr,
@@ -489,10 +491,7 @@ export class Parser {
     }
 
     if (this.match('STRING')) {
-      return {
-        type: 'StringLiteral',
-        value: this.previous().value,
-      }
+      return this.parseStringExpression(this.previous().value)
     }
 
     if (this.match('TRUE')) {
@@ -569,6 +568,118 @@ export class Parser {
       params,
       body: this.check('LBRACE') ? this.parseBlock() : this.parseExpression(),
     }
+  }
+
+  private parseStringExpression(value: string): Expression {
+    const parts = this.parseInterpolatedStringParts(value)
+
+    if (parts === null) {
+      return {
+        type: 'StringLiteral',
+        value,
+      }
+    }
+
+    return {
+      type: 'InterpolatedString',
+      parts,
+    } satisfies InterpolatedString
+  }
+
+  private parseInterpolatedStringParts(value: string): StringPart[] | null {
+    if (!value.includes('{')) {
+      return null
+    }
+
+    const parts: StringPart[] = []
+    let text = ''
+    let index = 0
+    let foundInterpolation = false
+
+    while (index < value.length) {
+      const character = value[index]
+
+      if (character !== '{') {
+        text += character
+        index += 1
+        continue
+      }
+
+      const interpolationEnd = this.findInterpolationEnd(value, index)
+
+      if (interpolationEnd === -1) {
+        throw new Error('Unterminated interpolation in string literal')
+      }
+
+      foundInterpolation = true
+
+      if (text.length > 0) {
+        parts.push({
+          type: 'StringText',
+          value: text,
+        })
+        text = ''
+      }
+
+      const expressionSource = value.slice(index + 1, interpolationEnd).trim()
+
+      if (expressionSource.length === 0) {
+        throw new Error('Expected expression inside string interpolation')
+      }
+
+      parts.push({
+        type: 'Interpolation',
+        expression: parseInlineExpression(expressionSource),
+      })
+
+      index = interpolationEnd + 1
+    }
+
+    if (!foundInterpolation) {
+      return null
+    }
+
+    if (text.length > 0) {
+      parts.push({
+        type: 'StringText',
+        value: text,
+      })
+    }
+
+    return parts
+  }
+
+  private findInterpolationEnd(value: string, start: number): number {
+    let depth = 0
+    let inString = false
+
+    for (let index = start; index < value.length; index += 1) {
+      const character = value[index]
+
+      if (character === '`') {
+        inString = !inString
+        continue
+      }
+
+      if (inString) {
+        continue
+      }
+
+      if (character === '{') {
+        depth += 1
+        continue
+      }
+
+      if (character === '}') {
+        depth -= 1
+
+        if (depth === 0) {
+          return index
+        }
+      }
+    }
+
+    return -1
   }
 
   private parseResultExpr(type: VictoryExpr['type'] | DefeatExpr['type']) {
@@ -779,4 +890,27 @@ export class Parser {
       `Parse error at line ${token.line}, column ${token.column}. ${message}`
     )
   }
+}
+
+function parseInlineExpression(source: string): Expression {
+  const program = parse({ source })
+
+  if (program.body.length !== 1) {
+    throw new Error('Interpolation must contain exactly one expression')
+  }
+
+  const [statement] = program.body
+
+  if (statement === undefined) {
+    throw new Error('Interpolation must contain exactly one expression')
+  }
+
+  if (
+    statement.type === 'JutsuBinding' ||
+    statement.type === 'DattebayoStatement'
+  ) {
+    throw new Error('Interpolation can only contain expressions')
+  }
+
+  return statement
 }

@@ -127,6 +127,12 @@ describe('Lexer', () => {
       expect(getToken(tokens, 0).type).toBe('STRING')
       expect(getToken(tokens, 0).value).toBe('hello {name}')
     })
+
+    it('tokenizes strings with nested interpolated strings', () => {
+      const tokens = tokenize('`Outer {`Inner {name}`}`')
+      expect(getToken(tokens, 0).type).toBe('STRING')
+      expect(getToken(tokens, 0).value).toBe('Outer {`Inner {name}`}')
+    })
   })
 
   describe('identifiers', () => {

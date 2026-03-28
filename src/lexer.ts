@@ -238,27 +238,82 @@ export class Lexer {
   private string(): void {
     const startLine = this.line
     const startColumn = this.column - 1
+    const contexts: Array<
+      { type: 'string' } | { type: 'interpolation'; depth: number }
+    > = [{ type: 'string' }]
 
-    while (this.peek() !== '`' && !this.isAtEnd()) {
-      if (this.peek() === '\n') {
+    while (!this.isAtEnd()) {
+      const character = this.peek()
+      const context = contexts[contexts.length - 1]!
+
+      if (character === '\n') {
         this.line++
         this.column = 0
+        this.advance()
+        continue
       }
+
+      if (context.type === 'string') {
+        if (character === '`') {
+          this.advance()
+
+          if (contexts.length === 1) {
+            const value = this.source.substring(
+              this.start + 1,
+              this.current - 1
+            )
+            this.addToken('STRING', value)
+            return
+          }
+
+          contexts.pop()
+          continue
+        }
+
+        if (character === '{') {
+          contexts.push({
+            type: 'interpolation',
+            depth: 1,
+          })
+          this.advance()
+          continue
+        }
+
+        this.advance()
+        continue
+      }
+
+      if (character === '`') {
+        contexts.push({
+          type: 'string',
+        })
+        this.advance()
+        continue
+      }
+
+      if (character === '{') {
+        context.depth += 1
+        this.advance()
+        continue
+      }
+
+      if (character === '}') {
+        context.depth -= 1
+        this.advance()
+
+        if (context.depth === 0) {
+          contexts.pop()
+        }
+
+        continue
+      }
+
       this.advance()
     }
 
-    if (this.isAtEnd()) {
-      throw new Error(
-        `Unterminated string at line ${startLine}, column ${startColumn}`
-      )
-    }
-
-    // Consume closing backtick
-    this.advance()
-
-    // Extract string value (without backticks)
-    const value = this.source.substring(this.start + 1, this.current - 1)
-    this.addToken('STRING', value)
+    throw new Error(
+      `Unterminated string at line ${startLine}, column ${startColumn}`
+    )
   }
 
   private number(): void {

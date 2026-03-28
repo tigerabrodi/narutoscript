@@ -2,12 +2,13 @@ import type {
   BinaryExpr,
   Block,
   Expression,
+  InterpolatedString,
   Pattern,
   Program,
   Statement,
   UnaryExpr,
 } from './ast'
-import { createBuiltins } from './builtins'
+import { createBuiltins, renderValue } from './builtins'
 import { parse } from './parser'
 
 export type BuiltinValue = {
@@ -164,6 +165,8 @@ function evaluateExpression(expression: Expression, env: Environment): Value {
         type: 'string',
         value: expression.value,
       }
+    case 'InterpolatedString':
+      return evaluateInterpolatedString(expression, env)
     case 'BooleanLiteral':
       return {
         type: 'boolean',
@@ -248,6 +251,24 @@ function evaluateUnaryExpr(expression: UnaryExpr, env: Environment): Value {
       return booleanValue(!expectBoolean(argument, 'nani'))
     default:
       throw new Error(`Unsupported unary operator '${expression.operator}'`)
+  }
+}
+
+function evaluateInterpolatedString(
+  expression: InterpolatedString,
+  env: Environment
+): Value {
+  return {
+    type: 'string',
+    value: expression.parts
+      .map((part) => {
+        if (part.type === 'StringText') {
+          return part.value
+        }
+
+        return renderValue(evaluateExpression(part.expression, env))
+      })
+      .join(''),
   }
 }
 

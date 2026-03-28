@@ -26,6 +26,95 @@ describe('Parser', () => {
       })
     })
 
+    it('parses interpolated strings into parts', () => {
+      expect(parseSingle('`Hello {name}`')).toEqual({
+        type: 'InterpolatedString',
+        parts: [
+          {
+            type: 'StringText',
+            value: 'Hello ',
+          },
+          {
+            type: 'Interpolation',
+            expression: {
+              type: 'Identifier',
+              name: 'name',
+            },
+          },
+        ],
+      })
+    })
+
+    it('parses interpolated strings with multiple expressions', () => {
+      expect(parseSingle('`Hello {name}. Next year {age + 1}`')).toEqual({
+        type: 'InterpolatedString',
+        parts: [
+          {
+            type: 'StringText',
+            value: 'Hello ',
+          },
+          {
+            type: 'Interpolation',
+            expression: {
+              type: 'Identifier',
+              name: 'name',
+            },
+          },
+          {
+            type: 'StringText',
+            value: '. Next year ',
+          },
+          {
+            type: 'Interpolation',
+            expression: {
+              type: 'BinaryExpr',
+              operator: '+',
+              left: {
+                type: 'Identifier',
+                name: 'age',
+              },
+              right: {
+                type: 'NumberLiteral',
+                value: 1,
+                raw: '1',
+              },
+            },
+          },
+        ],
+      })
+    })
+
+    it('parses nested interpolated strings', () => {
+      expect(parseSingle('`Outer {`Inner {name}`}`')).toEqual({
+        type: 'InterpolatedString',
+        parts: [
+          {
+            type: 'StringText',
+            value: 'Outer ',
+          },
+          {
+            type: 'Interpolation',
+            expression: {
+              type: 'InterpolatedString',
+              parts: [
+                {
+                  type: 'StringText',
+                  value: 'Inner ',
+                },
+                {
+                  type: 'Interpolation',
+                  expression: {
+                    type: 'Identifier',
+                    name: 'name',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      })
+    })
+
     it('parses boolean literals', () => {
       expect(parseSingle('true')).toEqual({
         type: 'BooleanLiteral',
@@ -911,6 +1000,18 @@ describe('Parser', () => {
           ['jutsu broken = (x -> x + 1', 'jutsu next = 2'].join('\n')
         )
       ).toThrow(/line 1/i)
+    })
+
+    it('throws on empty string interpolation expressions', () => {
+      expect(() => parseProgram('`Hello {}`')).toThrow(
+        /expected expression inside string interpolation/i
+      )
+    })
+
+    it('throws on unterminated string interpolation expressions', () => {
+      expect(() => parseProgram('`Hello {name`')).toThrow(
+        /unterminated (interpolation|string)/i
+      )
     })
   })
 })
