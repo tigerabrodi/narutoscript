@@ -7,7 +7,15 @@ import type {
   Statement,
   UnaryExpr,
 } from './ast'
+import { createBuiltins } from './builtins'
 import { parse } from './parser'
+
+export type BuiltinValue = {
+  type: 'builtin'
+  name: string
+  arity: number
+  call: (args: Array<Value>) => Value
+}
 
 export type Value =
   | { type: 'number'; value: number }
@@ -16,6 +24,7 @@ export type Value =
   | { type: 'poof' }
   | { type: 'list'; value: Value[] }
   | { type: 'object'; value: Map<string, Value> }
+  | BuiltinValue
   | {
       type: 'function'
       params: string[]
@@ -64,9 +73,17 @@ type EvalResult = {
   env: Environment
 }
 
-export function interpret({ source }: { source: string }): Value {
+export function interpret({
+  source,
+  output = (line: string) => {
+    console.log(line)
+  },
+}: {
+  output?: (line: string) => void
+  source: string
+}): Value {
   const program = parse({ source })
-  return evaluateProgram(program)
+  return evaluateProgram(program, createGlobalEnvironment(output))
 }
 
 export function evaluateProgram(
@@ -82,6 +99,16 @@ export function evaluateProgram(
 
     throw error
   }
+}
+
+function createGlobalEnvironment(output: (line: string) => void): Environment {
+  let env = new Environment()
+
+  for (const [name, value] of createBuiltins({ output, invokeCallable })) {
+    env = env.define(name, value)
+  }
+
+  return env
 }
 
 function evaluateStatements(
@@ -285,14 +312,27 @@ function evaluateFunctionCall(
   env: Environment
 ): Value {
   const callee = evaluateExpression(expression.callee, env)
+  const args = expression.args.map((arg) => evaluateExpression(arg, env))
+
+  return invokeCallable(callee, args)
+}
+
+function invokeCallable(callee: Value, args: Array<Value>): Value {
+  if (callee.type === 'builtin') {
+    if (args.length !== callee.arity) {
+      throw new Error(
+        `Expected ${callee.arity} arguments but got ${args.length}`
+      )
+    }
+
+    return callee.call(args)
+  }
 
   if (callee.type !== 'function') {
     throw new Error(
       'Can only call functions. Tried to call a non-function value'
     )
   }
-
-  const args = expression.args.map((arg) => evaluateExpression(arg, env))
 
   if (args.length !== callee.params.length) {
     throw new Error(
@@ -625,6 +665,8 @@ function isEqual(left: Value, right: Value): boolean {
         left.value,
         (right as Extract<Value, { type: 'defeat' }>).value
       )
+    case 'builtin':
+      return left === right
     case 'function':
       return left === right
     default:
