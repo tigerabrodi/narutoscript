@@ -1,5 +1,14 @@
 import type { BuiltinValue, Value } from './interpreter'
 
+export const BUILTIN_NAMES = [
+  'say',
+  'clone',
+  'pick',
+  'combine',
+  'length',
+  'type',
+] as const
+
 export function createBuiltins({
   output,
   invokeCallable,

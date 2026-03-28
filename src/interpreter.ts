@@ -70,6 +70,22 @@ export class Environment {
 
     throw new Error(`Undefined variable '${name}'`)
   }
+
+  visibleEntries(): Array<[string, Value]> {
+    const entries = new Map<string, Value>()
+    this.collectVisibleEntries(entries)
+    return Array.from(entries.entries())
+  }
+
+  private collectVisibleEntries(entries: Map<string, Value>): void {
+    if (this.parent) {
+      this.parent.collectVisibleEntries(entries)
+    }
+
+    for (const [name, value] of this.bindings.entries()) {
+      entries.set(name, value)
+    }
+  }
 }
 
 type EvalResult = {
