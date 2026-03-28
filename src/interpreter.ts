@@ -5,26 +5,26 @@ import type {
   Program,
   Statement,
   UnaryExpr,
-} from "./ast";
-import { parse } from "./parser";
+} from './ast'
+import { parse } from './parser'
 
 export type Value =
-  | { type: "number"; value: number }
-  | { type: "string"; value: string }
-  | { type: "boolean"; value: boolean }
-  | { type: "poof" }
-  | { type: "list"; value: Value[] }
-  | { type: "object"; value: Map<string, Value> }
+  | { type: 'number'; value: number }
+  | { type: 'string'; value: string }
+  | { type: 'boolean'; value: boolean }
+  | { type: 'poof' }
+  | { type: 'list'; value: Value[] }
+  | { type: 'object'; value: Map<string, Value> }
   | {
-      type: "function";
-      params: string[];
-      body: Expression | Block;
-      closure: Environment;
+      type: 'function'
+      params: string[]
+      body: Expression | Block
+      closure: Environment
     }
-  | { type: "victory"; value: Value }
-  | { type: "defeat"; value: Value };
+  | { type: 'victory'; value: Value }
+  | { type: 'defeat'; value: Value }
 
-const POOF: Value = { type: "poof" };
+const POOF: Value = { type: 'poof' }
 
 class ReturnSignal {
   constructor(readonly value: Value) {}
@@ -33,345 +33,339 @@ class ReturnSignal {
 export class Environment {
   constructor(
     private readonly parent: Environment | null = null,
-    private readonly bindings: Map<string, Value> = new Map(),
+    private readonly bindings: Map<string, Value> = new Map()
   ) {}
 
   child(): Environment {
-    return new Environment(this);
+    return new Environment(this)
   }
 
   define(name: string, value: Value): Environment {
     // Each binding creates a new frame so closures keep the environment they saw.
-    return new Environment(this, new Map([[name, value]]));
+    return new Environment(this, new Map([[name, value]]))
   }
 
   lookup(name: string): Value {
     if (this.bindings.has(name)) {
-      return this.bindings.get(name)!;
+      return this.bindings.get(name)!
     }
 
     if (this.parent) {
-      return this.parent.lookup(name);
+      return this.parent.lookup(name)
     }
 
-    throw new Error(`Undefined variable '${name}'`);
+    throw new Error(`Undefined variable '${name}'`)
   }
 }
 
 type EvalResult = {
-  value: Value;
-  env: Environment;
-};
+  value: Value
+  env: Environment
+}
 
 export function interpret({ source }: { source: string }): Value {
-  const program = parse({ source });
-  return evaluateProgram(program);
+  const program = parse({ source })
+  return evaluateProgram(program)
 }
 
 export function evaluateProgram(
   program: Program,
-  env: Environment = new Environment(),
+  env: Environment = new Environment()
 ): Value {
   try {
-    return evaluateStatements(program.body, env).value;
+    return evaluateStatements(program.body, env).value
   } catch (error) {
     if (error instanceof ReturnSignal) {
-      return error.value;
+      return error.value
     }
 
-    throw error;
+    throw error
   }
 }
 
 function evaluateStatements(
   statements: Statement[],
-  env: Environment,
+  env: Environment
 ): EvalResult {
-  let currentEnv = env;
-  let lastValue = POOF;
+  let currentEnv = env
+  let lastValue = POOF
 
   for (const statement of statements) {
-    const result = evaluateStatement(statement, currentEnv);
-    currentEnv = result.env;
-    lastValue = result.value;
+    const result = evaluateStatement(statement, currentEnv)
+    currentEnv = result.env
+    lastValue = result.value
   }
 
   return {
     value: lastValue,
     env: currentEnv,
-  };
+  }
 }
 
 function evaluateStatement(statement: Statement, env: Environment): EvalResult {
   switch (statement.type) {
-    case "JutsuBinding": {
-      const value = evaluateExpression(statement.value, env);
+    case 'JutsuBinding': {
+      const value = evaluateExpression(statement.value, env)
       return {
         value,
         env: env.define(statement.name.name, value),
-      };
+      }
     }
-    case "DattebayoStatement": {
-      const value = evaluateExpression(statement.value, env);
-      throw new ReturnSignal(value);
+    case 'DattebayoStatement': {
+      const value = evaluateExpression(statement.value, env)
+      throw new ReturnSignal(value)
     }
     default: {
       return {
         value: evaluateExpression(statement, env),
         env,
-      };
+      }
     }
   }
 }
 
 function evaluateExpression(expression: Expression, env: Environment): Value {
   switch (expression.type) {
-    case "NumberLiteral":
+    case 'NumberLiteral':
       return {
-        type: "number",
+        type: 'number',
         value: expression.value,
-      };
-    case "StringLiteral":
+      }
+    case 'StringLiteral':
       return {
-        type: "string",
+        type: 'string',
         value: expression.value,
-      };
-    case "BooleanLiteral":
+      }
+    case 'BooleanLiteral':
       return {
-        type: "boolean",
+        type: 'boolean',
         value: expression.value,
-      };
-    case "PoofLiteral":
-      return POOF;
-    case "Identifier":
-      return env.lookup(expression.name);
-    case "UnaryExpr":
-      return evaluateUnaryExpr(expression, env);
-    case "BinaryExpr":
-      return evaluateBinaryExpr(expression, env);
-    case "FunctionExpr":
+      }
+    case 'PoofLiteral':
+      return POOF
+    case 'Identifier':
+      return env.lookup(expression.name)
+    case 'UnaryExpr':
+      return evaluateUnaryExpr(expression, env)
+    case 'BinaryExpr':
+      return evaluateBinaryExpr(expression, env)
+    case 'FunctionExpr':
       return {
-        type: "function",
+        type: 'function',
         params: expression.params.map((param) => param.name),
         body: expression.body,
         closure: env,
-      };
-    case "FunctionCall":
-      return evaluateFunctionCall(expression, env);
-    case "Block":
-      return evaluateBlock(expression, env);
-    case "VictoryExpr":
+      }
+    case 'FunctionCall':
+      return evaluateFunctionCall(expression, env)
+    case 'Block':
+      return evaluateBlock(expression, env)
+    case 'VictoryExpr':
       return {
-        type: "victory",
+        type: 'victory',
         value: evaluateExpression(expression.value, env),
-      };
-    case "DefeatExpr":
+      }
+    case 'DefeatExpr':
       return {
-        type: "defeat",
+        type: 'defeat',
         value: evaluateExpression(expression.value, env),
-      };
-    case "ListLiteral":
-    case "ObjectLiteral":
-    case "PropertyAccess":
-    case "WhenExpr":
-    case "TrainLoop":
-    case "ReadExpr":
-      throw new Error(
-        `Runtime feature not implemented yet: ${expression.type}`,
-      );
+      }
+    case 'ListLiteral':
+    case 'ObjectLiteral':
+    case 'PropertyAccess':
+    case 'WhenExpr':
+    case 'TrainLoop':
+    case 'ReadExpr':
+      throw new Error(`Runtime feature not implemented yet: ${expression.type}`)
     default:
-      return assertNever(expression);
+      return assertNever(expression)
   }
 }
 
 function evaluateUnaryExpr(expression: UnaryExpr, env: Environment): Value {
-  const argument = evaluateExpression(expression.argument, env);
+  const argument = evaluateExpression(expression.argument, env)
 
   switch (expression.operator) {
-    case "nani":
-      return booleanValue(!expectBoolean(argument, "nani"));
+    case 'nani':
+      return booleanValue(!expectBoolean(argument, 'nani'))
     default:
-      throw new Error(`Unsupported unary operator '${expression.operator}'`);
+      throw new Error(`Unsupported unary operator '${expression.operator}'`)
   }
 }
 
 function evaluateBinaryExpr(expression: BinaryExpr, env: Environment): Value {
-  if (expression.operator === "and") {
-    const left = evaluateExpression(expression.left, env);
-    const leftValue = expectBoolean(left, "and");
+  if (expression.operator === 'and') {
+    const left = evaluateExpression(expression.left, env)
+    const leftValue = expectBoolean(left, 'and')
 
     if (!leftValue) {
-      return booleanValue(false);
+      return booleanValue(false)
     }
 
-    const right = evaluateExpression(expression.right, env);
-    return booleanValue(expectBoolean(right, "and"));
+    const right = evaluateExpression(expression.right, env)
+    return booleanValue(expectBoolean(right, 'and'))
   }
 
-  if (expression.operator === "or") {
-    const left = evaluateExpression(expression.left, env);
-    const leftValue = expectBoolean(left, "or");
+  if (expression.operator === 'or') {
+    const left = evaluateExpression(expression.left, env)
+    const leftValue = expectBoolean(left, 'or')
 
     if (leftValue) {
-      return booleanValue(true);
+      return booleanValue(true)
     }
 
-    const right = evaluateExpression(expression.right, env);
-    return booleanValue(expectBoolean(right, "or"));
+    const right = evaluateExpression(expression.right, env)
+    return booleanValue(expectBoolean(right, 'or'))
   }
 
-  const left = evaluateExpression(expression.left, env);
-  const right = evaluateExpression(expression.right, env);
+  const left = evaluateExpression(expression.left, env)
+  const right = evaluateExpression(expression.right, env)
 
   switch (expression.operator) {
-    case "+":
-      return numberValue(expectNumber(left, "+") + expectNumber(right, "+"));
-    case "-":
-      return numberValue(expectNumber(left, "-") - expectNumber(right, "-"));
-    case "*":
-      return numberValue(expectNumber(left, "*") * expectNumber(right, "*"));
-    case "/":
-      return numberValue(expectNumber(left, "/") / expectNumber(right, "/"));
-    case "%":
-      return numberValue(expectNumber(left, "%") % expectNumber(right, "%"));
-    case "<":
-      return booleanValue(expectNumber(left, "<") < expectNumber(right, "<"));
-    case ">":
-      return booleanValue(expectNumber(left, ">") > expectNumber(right, ">"));
-    case "<=":
-      return booleanValue(
-        expectNumber(left, "<=") <= expectNumber(right, "<="),
-      );
-    case ">=":
-      return booleanValue(
-        expectNumber(left, ">=") >= expectNumber(right, ">="),
-      );
-    case "==":
-      return booleanValue(isEqual(left, right));
-    case "!=":
-      return booleanValue(!isEqual(left, right));
+    case '+':
+      return numberValue(expectNumber(left, '+') + expectNumber(right, '+'))
+    case '-':
+      return numberValue(expectNumber(left, '-') - expectNumber(right, '-'))
+    case '*':
+      return numberValue(expectNumber(left, '*') * expectNumber(right, '*'))
+    case '/':
+      return numberValue(expectNumber(left, '/') / expectNumber(right, '/'))
+    case '%':
+      return numberValue(expectNumber(left, '%') % expectNumber(right, '%'))
+    case '<':
+      return booleanValue(expectNumber(left, '<') < expectNumber(right, '<'))
+    case '>':
+      return booleanValue(expectNumber(left, '>') > expectNumber(right, '>'))
+    case '<=':
+      return booleanValue(expectNumber(left, '<=') <= expectNumber(right, '<='))
+    case '>=':
+      return booleanValue(expectNumber(left, '>=') >= expectNumber(right, '>='))
+    case '==':
+      return booleanValue(isEqual(left, right))
+    case '!=':
+      return booleanValue(!isEqual(left, right))
     default:
-      throw new Error(`Unsupported binary operator '${expression.operator}'`);
+      throw new Error(`Unsupported binary operator '${expression.operator}'`)
   }
 }
 
 function evaluateFunctionCall(
-  expression: Extract<Expression, { type: "FunctionCall" }>,
-  env: Environment,
+  expression: Extract<Expression, { type: 'FunctionCall' }>,
+  env: Environment
 ): Value {
-  const callee = evaluateExpression(expression.callee, env);
+  const callee = evaluateExpression(expression.callee, env)
 
-  if (callee.type !== "function") {
+  if (callee.type !== 'function') {
     throw new Error(
-      "Can only call functions. Tried to call a non-function value",
-    );
+      'Can only call functions. Tried to call a non-function value'
+    )
   }
 
-  const args = expression.args.map((arg) => evaluateExpression(arg, env));
+  const args = expression.args.map((arg) => evaluateExpression(arg, env))
 
   if (args.length !== callee.params.length) {
     throw new Error(
-      `Expected ${callee.params.length} arguments but got ${args.length}`,
-    );
+      `Expected ${callee.params.length} arguments but got ${args.length}`
+    )
   }
 
-  let callEnv = callee.closure.child();
+  let callEnv = callee.closure.child()
 
   for (let index = 0; index < callee.params.length; index += 1) {
-    callEnv = callEnv.define(callee.params[index]!, args[index]!);
+    callEnv = callEnv.define(callee.params[index]!, args[index]!)
   }
 
   try {
-    if (callee.body.type === "Block") {
-      return evaluateBlock(callee.body, callEnv);
+    if (callee.body.type === 'Block') {
+      return evaluateBlock(callee.body, callEnv)
     }
 
-    return evaluateExpression(callee.body, callEnv);
+    return evaluateExpression(callee.body, callEnv)
   } catch (error) {
     if (error instanceof ReturnSignal) {
-      return error.value;
+      return error.value
     }
 
-    throw error;
+    throw error
   }
 }
 
 function evaluateBlock(block: Block, env: Environment): Value {
-  return evaluateStatements(block.body, env.child()).value;
+  return evaluateStatements(block.body, env.child()).value
 }
 
 function numberValue(value: number): Value {
   return {
-    type: "number",
+    type: 'number',
     value,
-  };
+  }
 }
 
 function booleanValue(value: boolean): Value {
   return {
-    type: "boolean",
+    type: 'boolean',
     value,
-  };
+  }
 }
 
 function expectNumber(value: Value, operator: string): number {
-  if (value.type !== "number") {
-    throw new Error(`Operator '${operator}' expects numbers`);
+  if (value.type !== 'number') {
+    throw new Error(`Operator '${operator}' expects numbers`)
   }
 
-  return value.value;
+  return value.value
 }
 
 function expectBoolean(value: Value, operator: string): boolean {
-  if (value.type !== "boolean") {
-    throw new Error(`Operator '${operator}' expects booleans`);
+  if (value.type !== 'boolean') {
+    throw new Error(`Operator '${operator}' expects booleans`)
   }
 
-  return value.value;
+  return value.value
 }
 
 function isEqual(left: Value, right: Value): boolean {
   if (left.type !== right.type) {
-    return false;
+    return false
   }
 
   switch (left.type) {
-    case "number":
-    case "string":
-    case "boolean":
-      return left.value === right.value;
-    case "poof":
-      return true;
-    case "list":
+    case 'number':
+    case 'string':
+    case 'boolean':
+      return left.value === right.value
+    case 'poof':
+      return true
+    case 'list':
       return (
         left.value.length === right.value.length &&
         left.value.every((item, index) => isEqual(item, right.value[index]!))
-      );
-    case "object": {
+      )
+    case 'object': {
       if (left.value.size !== right.value.size) {
-        return false;
+        return false
       }
 
       for (const [key, value] of left.value.entries()) {
-        const otherValue = right.value.get(key);
+        const otherValue = right.value.get(key)
 
         if (!otherValue || !isEqual(value, otherValue)) {
-          return false;
+          return false
         }
       }
 
-      return true;
+      return true
     }
-    case "victory":
-    case "defeat":
-      return isEqual(left.value, right.value);
-    case "function":
-      return left === right;
+    case 'victory':
+    case 'defeat':
+      return isEqual(left.value, right.value)
+    case 'function':
+      return left === right
     default:
-      return assertNever(left);
+      return assertNever(left)
   }
 }
 
 function assertNever(value: never): never {
-  throw new Error(`Unexpected node: ${JSON.stringify(value)}`);
+  throw new Error(`Unexpected node: ${JSON.stringify(value)}`)
 }

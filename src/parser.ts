@@ -1,4 +1,4 @@
-import { Lexer, type Token, type TokenType } from "./lexer"
+import { Lexer, type Token, type TokenType } from './lexer'
 import type {
   Block,
   ConstructorPattern,
@@ -22,7 +22,7 @@ import type {
   VictoryExpr,
   WhenExpr,
   WildcardPattern,
-} from "./ast"
+} from './ast'
 
 export function parse({ source }: { source: string }): Program {
   const lexer = new Lexer({ source })
@@ -44,17 +44,17 @@ export class Parser {
     }
 
     return {
-      type: "Program",
+      type: 'Program',
       body,
     }
   }
 
   private parseStatement(): Statement {
-    if (this.match("JUTSU")) {
+    if (this.match('JUTSU')) {
       return this.parseJutsuBinding()
     }
 
-    if (this.match("DATTEBAYO")) {
+    if (this.match('DATTEBAYO')) {
       return this.parseDattebayoStatement()
     }
 
@@ -63,10 +63,10 @@ export class Parser {
 
   private parseJutsuBinding(): JutsuBinding {
     const name = this.parseIdentifier("Expected binding name after 'jutsu'")
-    this.consume("EQUALS", "Expected '=' after binding name")
+    this.consume('EQUALS', "Expected '=' after binding name")
 
     return {
-      type: "JutsuBinding",
+      type: 'JutsuBinding',
       name,
       value: this.parseExpression(),
     }
@@ -74,21 +74,21 @@ export class Parser {
 
   private parseDattebayoStatement(): DattebayoStatement {
     return {
-      type: "DattebayoStatement",
+      type: 'DattebayoStatement',
       value: this.parseExpression(),
     }
   }
 
   private parseExpression(): Expression {
-    if (this.match("WHEN")) {
+    if (this.match('WHEN')) {
       return this.parseWhenExpr()
     }
 
-    if (this.match("TRAIN")) {
+    if (this.match('TRAIN')) {
       return this.parseTrainLoop()
     }
 
-    if (this.match("READ")) {
+    if (this.match('READ')) {
       return this.parseReadExpr()
     }
 
@@ -100,12 +100,12 @@ export class Parser {
     const thenBranch = this.parseBlock()
     let otherwiseBranch: Block | null = null
 
-    if (this.match("OTHERWISE")) {
+    if (this.match('OTHERWISE')) {
       otherwiseBranch = this.parseBlock()
     }
 
     return {
-      type: "WhenExpr",
+      type: 'WhenExpr',
       condition,
       thenBranch,
       otherwiseBranch,
@@ -113,13 +113,15 @@ export class Parser {
   }
 
   private parseTrainLoop(): TrainLoop {
-    const iterator = this.parseIdentifier("Expected loop variable after 'train'")
-    this.consume("IN", "Expected 'in' after loop variable")
+    const iterator = this.parseIdentifier(
+      "Expected loop variable after 'train'"
+    )
+    this.consume('IN', "Expected 'in' after loop variable")
     const iterable = this.parseExpression()
     const body = this.parseBlock()
 
     return {
-      type: "TrainLoop",
+      type: 'TrainLoop',
       iterator,
       iterable,
       body,
@@ -128,18 +130,18 @@ export class Parser {
 
   private parseReadExpr(): ReadExpr {
     const value = this.parseExpression()
-    this.consume("LBRACE", "Expected '{' to start read arms")
+    this.consume('LBRACE', "Expected '{' to start read arms")
 
     const arms: MatchArm[] = []
 
-    while (!this.check("RBRACE") && !this.isAtEnd()) {
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
       arms.push(this.parseMatchArm())
     }
 
-    this.consume("RBRACE", "Expected '}' after read arms")
+    this.consume('RBRACE', "Expected '}' after read arms")
 
     return {
-      type: "ReadExpr",
+      type: 'ReadExpr',
       value,
       arms,
     }
@@ -149,18 +151,18 @@ export class Parser {
     const pattern = this.parsePattern()
     let guard: Expression | null = null
 
-    if (this.match("WHEN")) {
+    if (this.match('WHEN')) {
       guard = this.parseExpression()
     }
 
-    this.consume("ARROW", "Expected '->' after match pattern")
+    this.consume('ARROW', "Expected '->' after match pattern")
 
-    const body = this.check("LBRACE")
+    const body = this.check('LBRACE')
       ? this.parseBlock()
       : this.parseExpression()
 
     return {
-      type: "MatchArm",
+      type: 'MatchArm',
       pattern,
       guard,
       body,
@@ -168,54 +170,54 @@ export class Parser {
   }
 
   private parsePattern(): Pattern {
-    if (this.match("UNDERSCORE")) {
+    if (this.match('UNDERSCORE')) {
       return {
-        type: "WildcardPattern",
+        type: 'WildcardPattern',
       }
     }
 
-    if (this.match("NUMBER")) {
+    if (this.match('NUMBER')) {
       return {
-        type: "NumberPattern",
+        type: 'NumberPattern',
         value: Number(this.previous().value),
         raw: this.previous().value,
       }
     }
 
-    if (this.match("STRING")) {
+    if (this.match('STRING')) {
       return {
-        type: "StringPattern",
+        type: 'StringPattern',
         value: this.previous().value,
       }
     }
 
-    if (this.match("TRUE")) {
+    if (this.match('TRUE')) {
       return {
-        type: "BooleanPattern",
+        type: 'BooleanPattern',
         value: true,
       }
     }
 
-    if (this.match("FALSE")) {
+    if (this.match('FALSE')) {
       return {
-        type: "BooleanPattern",
+        type: 'BooleanPattern',
         value: false,
       }
     }
 
-    if (this.match("POOF")) {
+    if (this.match('POOF')) {
       const pattern: PoofPattern = {
-        type: "PoofPattern",
+        type: 'PoofPattern',
       }
 
       return pattern
     }
 
-    if (this.check("LBRACKET")) {
+    if (this.check('LBRACKET')) {
       return this.parseListPattern()
     }
 
-    if (this.check("LBRACE")) {
+    if (this.check('LBRACE')) {
       return this.parseObjectPattern()
     }
 
@@ -223,54 +225,54 @@ export class Parser {
       return this.parseConstructorPattern()
     }
 
-    if (this.match("IDENTIFIER")) {
+    if (this.match('IDENTIFIER')) {
       return {
-        type: "IdentifierPattern",
+        type: 'IdentifierPattern',
         name: this.previous().value,
       }
     }
 
-    throw this.errorAtCurrent("Expected pattern")
+    throw this.errorAtCurrent('Expected pattern')
   }
 
   private parseListPattern(): ListPattern {
-    this.consume("LBRACKET", "Expected '[' to start list pattern")
+    this.consume('LBRACKET', "Expected '[' to start list pattern")
     const elements: Pattern[] = []
     let rest: IdentifierPattern | WildcardPattern | null = null
 
-    while (!this.check("RBRACKET") && !this.isAtEnd()) {
-      if (this.match("SPREAD")) {
+    while (!this.check('RBRACKET') && !this.isAtEnd()) {
+      if (this.match('SPREAD')) {
         rest = this.parseRestPattern()
         break
       }
 
       elements.push(this.parsePattern())
 
-      if (!this.match("COMMA")) {
+      if (!this.match('COMMA')) {
         break
       }
     }
 
-    this.consume("RBRACKET", "Expected ']' after list pattern")
+    this.consume('RBRACKET', "Expected ']' after list pattern")
 
     return {
-      type: "ListPattern",
+      type: 'ListPattern',
       elements,
       rest,
     }
   }
 
   private parseRestPattern(): IdentifierPattern | WildcardPattern {
-    if (this.match("IDENTIFIER")) {
+    if (this.match('IDENTIFIER')) {
       return {
-        type: "IdentifierPattern",
+        type: 'IdentifierPattern',
         name: this.previous().value,
       }
     }
 
-    if (this.match("UNDERSCORE")) {
+    if (this.match('UNDERSCORE')) {
       return {
-        type: "WildcardPattern",
+        type: 'WildcardPattern',
       }
     }
 
@@ -278,26 +280,26 @@ export class Parser {
   }
 
   private parseObjectPattern(): ObjectPattern {
-    this.consume("LBRACE", "Expected '{' to start object pattern")
-    const properties: ObjectPattern["properties"] = []
+    this.consume('LBRACE', "Expected '{' to start object pattern")
+    const properties: ObjectPattern['properties'] = []
 
-    while (!this.check("RBRACE") && !this.isAtEnd()) {
-      const key = this.parseObjectKey("Expected object pattern key")
-      this.consume("COLON", "Expected ':' after object pattern key")
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
+      const key = this.parseObjectKey('Expected object pattern key')
+      this.consume('COLON', "Expected ':' after object pattern key")
       properties.push({
         key,
         pattern: this.parsePattern(),
       })
 
-      if (!this.match("COMMA")) {
+      if (!this.match('COMMA')) {
         break
       }
     }
 
-    this.consume("RBRACE", "Expected '}' after object pattern")
+    this.consume('RBRACE', "Expected '}' after object pattern")
 
     return {
-      type: "ObjectPattern",
+      type: 'ObjectPattern',
       properties,
     }
   }
@@ -305,19 +307,19 @@ export class Parser {
   private parseConstructorPattern(): ConstructorPattern {
     const token = this.advance()
     const name = token.value
-    this.consume("LPAREN", "Expected '(' after constructor pattern name")
+    this.consume('LPAREN', "Expected '(' after constructor pattern name")
     const args: Pattern[] = []
 
-    if (!this.check("RPAREN")) {
+    if (!this.check('RPAREN')) {
       do {
         args.push(this.parsePattern())
-      } while (this.match("COMMA"))
+      } while (this.match('COMMA'))
     }
 
-    this.consume("RPAREN", "Expected ')' after constructor pattern")
+    this.consume('RPAREN', "Expected ')' after constructor pattern")
 
     return {
-      type: "ConstructorPattern",
+      type: 'ConstructorPattern',
       name,
       args,
     }
@@ -326,11 +328,11 @@ export class Parser {
   private parseOr(): Expression {
     let expression = this.parseAnd()
 
-    while (this.match("OR")) {
+    while (this.match('OR')) {
       const operator = this.previous().value
       const right = this.parseAnd()
       expression = {
-        type: "BinaryExpr",
+        type: 'BinaryExpr',
         operator,
         left: expression,
         right,
@@ -343,11 +345,11 @@ export class Parser {
   private parseAnd(): Expression {
     let expression = this.parseEquality()
 
-    while (this.match("AND")) {
+    while (this.match('AND')) {
       const operator = this.previous().value
       const right = this.parseEquality()
       expression = {
-        type: "BinaryExpr",
+        type: 'BinaryExpr',
         operator,
         left: expression,
         right,
@@ -360,11 +362,11 @@ export class Parser {
   private parseEquality(): Expression {
     let expression = this.parseComparison()
 
-    while (this.match("EQ", "NEQ")) {
+    while (this.match('EQ', 'NEQ')) {
       const operator = this.previous().value
       const right = this.parseComparison()
       expression = {
-        type: "BinaryExpr",
+        type: 'BinaryExpr',
         operator,
         left: expression,
         right,
@@ -377,11 +379,11 @@ export class Parser {
   private parseComparison(): Expression {
     let expression = this.parseTerm()
 
-    while (this.match("LT", "GT", "LTE", "GTE")) {
+    while (this.match('LT', 'GT', 'LTE', 'GTE')) {
       const operator = this.previous().value
       const right = this.parseTerm()
       expression = {
-        type: "BinaryExpr",
+        type: 'BinaryExpr',
         operator,
         left: expression,
         right,
@@ -394,11 +396,11 @@ export class Parser {
   private parseTerm(): Expression {
     let expression = this.parseFactor()
 
-    while (this.match("PLUS", "MINUS")) {
+    while (this.match('PLUS', 'MINUS')) {
       const operator = this.previous().value
       const right = this.parseFactor()
       expression = {
-        type: "BinaryExpr",
+        type: 'BinaryExpr',
         operator,
         left: expression,
         right,
@@ -411,11 +413,11 @@ export class Parser {
   private parseFactor(): Expression {
     let expression = this.parseUnary()
 
-    while (this.match("STAR", "SLASH", "PERCENT")) {
+    while (this.match('STAR', 'SLASH', 'PERCENT')) {
       const operator = this.previous().value
       const right = this.parseUnary()
       expression = {
-        type: "BinaryExpr",
+        type: 'BinaryExpr',
         operator,
         left: expression,
         right,
@@ -426,9 +428,9 @@ export class Parser {
   }
 
   private parseUnary(): Expression {
-    if (this.match("NANI")) {
+    if (this.match('NANI')) {
       return {
-        type: "UnaryExpr",
+        type: 'UnaryExpr',
         operator: this.previous().value,
         argument: this.parseUnary(),
       }
@@ -441,28 +443,30 @@ export class Parser {
     let expression = this.parsePrimary()
 
     while (true) {
-      if (this.match("LPAREN")) {
+      if (this.match('LPAREN')) {
         const args: Expression[] = []
 
-        if (!this.check("RPAREN")) {
+        if (!this.check('RPAREN')) {
           do {
             args.push(this.parseExpression())
-          } while (this.match("COMMA"))
+          } while (this.match('COMMA'))
         }
 
-        this.consume("RPAREN", "Expected ')' after arguments")
+        this.consume('RPAREN', "Expected ')' after arguments")
         expression = {
-          type: "FunctionCall",
+          type: 'FunctionCall',
           callee: expression,
           args,
         }
         continue
       }
 
-      if (this.match("DOT")) {
-        const property = this.parseIdentifier("Expected property name after '.'")
+      if (this.match('DOT')) {
+        const property = this.parseIdentifier(
+          "Expected property name after '.'"
+        )
         expression = {
-          type: "PropertyAccess",
+          type: 'PropertyAccess',
           object: expression,
           property: property.name,
         }
@@ -476,101 +480,101 @@ export class Parser {
   }
 
   private parsePrimary(): Expression {
-    if (this.match("NUMBER")) {
+    if (this.match('NUMBER')) {
       return {
-        type: "NumberLiteral",
+        type: 'NumberLiteral',
         value: Number(this.previous().value),
         raw: this.previous().value,
       }
     }
 
-    if (this.match("STRING")) {
+    if (this.match('STRING')) {
       return {
-        type: "StringLiteral",
+        type: 'StringLiteral',
         value: this.previous().value,
       }
     }
 
-    if (this.match("TRUE")) {
+    if (this.match('TRUE')) {
       return {
-        type: "BooleanLiteral",
+        type: 'BooleanLiteral',
         value: true,
       }
     }
 
-    if (this.match("FALSE")) {
+    if (this.match('FALSE')) {
       return {
-        type: "BooleanLiteral",
+        type: 'BooleanLiteral',
         value: false,
       }
     }
 
-    if (this.match("POOF")) {
+    if (this.match('POOF')) {
       return {
-        type: "PoofLiteral",
+        type: 'PoofLiteral',
       }
     }
 
-    if (this.match("VICTORY")) {
-      return this.parseResultExpr("VictoryExpr")
+    if (this.match('VICTORY')) {
+      return this.parseResultExpr('VictoryExpr')
     }
 
-    if (this.match("DEFEAT")) {
-      return this.parseResultExpr("DefeatExpr")
+    if (this.match('DEFEAT')) {
+      return this.parseResultExpr('DefeatExpr')
     }
 
-    if (this.match("IDENTIFIER")) {
+    if (this.match('IDENTIFIER')) {
       return {
-        type: "Identifier",
+        type: 'Identifier',
         name: this.previous().value,
       }
     }
 
-    if (this.check("LPAREN") && this.isFunctionExpression()) {
+    if (this.check('LPAREN') && this.isFunctionExpression()) {
       return this.parseFunctionExpression()
     }
 
-    if (this.match("LPAREN")) {
+    if (this.match('LPAREN')) {
       const expression = this.parseExpression()
-      this.consume("RPAREN", "Expected ')' after expression")
+      this.consume('RPAREN', "Expected ')' after expression")
       return expression
     }
 
-    if (this.check("LBRACKET")) {
+    if (this.check('LBRACKET')) {
       return this.parseListLiteral()
     }
 
-    if (this.check("LBRACE")) {
+    if (this.check('LBRACE')) {
       return this.parseObjectLiteral()
     }
 
-    throw this.errorAtCurrent("Expected expression")
+    throw this.errorAtCurrent('Expected expression')
   }
 
   private parseFunctionExpression(): FunctionExpr {
-    this.consume("LPAREN", "Expected '(' to start function parameters")
+    this.consume('LPAREN', "Expected '(' to start function parameters")
     const params: Identifier[] = []
 
-    if (!this.check("RPAREN")) {
+    if (!this.check('RPAREN')) {
       do {
-        params.push(this.parseIdentifier("Expected parameter name"))
-      } while (this.match("COMMA"))
+        params.push(this.parseIdentifier('Expected parameter name'))
+      } while (this.match('COMMA'))
     }
 
-    this.consume("RPAREN", "Expected ')' after parameters")
-    this.consume("ARROW", "Expected '->' after parameters")
+    this.consume('RPAREN', "Expected ')' after parameters")
+    this.consume('ARROW', "Expected '->' after parameters")
 
     return {
-      type: "FunctionExpr",
+      type: 'FunctionExpr',
       params,
-      body: this.check("LBRACE") ? this.parseBlock() : this.parseExpression(),
+      body: this.check('LBRACE') ? this.parseBlock() : this.parseExpression(),
     }
   }
 
-  private parseResultExpr(type: VictoryExpr["type"] | DefeatExpr["type"]) {
-    this.consume("LPAREN", "Expected '(' after result constructor")
+  private parseResultExpr(type: VictoryExpr['type'] | DefeatExpr['type']) {
+    this.consume('LPAREN', "Expected '(' after result constructor")
     const value = this.parseExpression()
-    this.consume("RPAREN", "Expected ')' after result value")
+    this.consume('RPAREN', "Expected ')' after result value")
 
     return {
       type,
@@ -579,74 +583,74 @@ export class Parser {
   }
 
   private parseListLiteral() {
-    this.consume("LBRACKET", "Expected '[' to start list literal")
+    this.consume('LBRACKET', "Expected '[' to start list literal")
     const elements: Expression[] = []
 
-    if (!this.check("RBRACKET")) {
+    if (!this.check('RBRACKET')) {
       do {
         elements.push(this.parseExpression())
-      } while (this.match("COMMA"))
+      } while (this.match('COMMA'))
     }
 
-    this.consume("RBRACKET", "Expected ']' after list literal")
+    this.consume('RBRACKET', "Expected ']' after list literal")
 
     return {
-      type: "ListLiteral",
+      type: 'ListLiteral',
       elements,
     } as const
   }
 
   private parseObjectLiteral() {
-    this.consume("LBRACE", "Expected '{' to start object literal")
+    this.consume('LBRACE', "Expected '{' to start object literal")
     const entries: ObjectEntry[] = []
 
-    while (!this.check("RBRACE") && !this.isAtEnd()) {
-      if (this.match("SPREAD")) {
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
+      if (this.match('SPREAD')) {
         entries.push({
-          type: "SpreadProperty",
+          type: 'SpreadProperty',
           argument: this.parseExpression(),
         })
       } else {
-        const key = this.parseObjectKey("Expected object key")
-        this.consume("COLON", "Expected ':' after object key")
+        const key = this.parseObjectKey('Expected object key')
+        this.consume('COLON', "Expected ':' after object key")
         entries.push({
-          type: "ObjectProperty",
+          type: 'ObjectProperty',
           key,
           value: this.parseExpression(),
         })
       }
 
-      if (!this.match("COMMA")) {
+      if (!this.match('COMMA')) {
         break
       }
     }
 
-    this.consume("RBRACE", "Expected '}' after object literal")
+    this.consume('RBRACE', "Expected '}' after object literal")
 
     return {
-      type: "ObjectLiteral",
+      type: 'ObjectLiteral',
       entries,
     } as const
   }
 
   private parseBlock(): Block {
-    this.consume("LBRACE", "Expected '{' to start block")
+    this.consume('LBRACE', "Expected '{' to start block")
     const body: Statement[] = []
 
-    while (!this.check("RBRACE") && !this.isAtEnd()) {
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
       body.push(this.parseStatement())
     }
 
-    this.consume("RBRACE", "Expected '}' after block")
+    this.consume('RBRACE', "Expected '}' after block")
 
     return {
-      type: "Block",
+      type: 'Block',
       body,
     }
   }
 
   private parseObjectKey(message: string): string {
-    if (this.match("IDENTIFIER", "STRING")) {
+    if (this.match('IDENTIFIER', 'STRING')) {
       return this.previous().value
     }
 
@@ -654,37 +658,37 @@ export class Parser {
   }
 
   private parseIdentifier(message: string): Identifier {
-    this.consume("IDENTIFIER", message)
+    this.consume('IDENTIFIER', message)
 
     return {
-      type: "Identifier",
+      type: 'Identifier',
       name: this.previous().value,
     }
   }
 
   private isConstructorPatternStart(): boolean {
-    if (this.check("VICTORY") || this.check("DEFEAT")) {
-      return this.checkNext("LPAREN")
+    if (this.check('VICTORY') || this.check('DEFEAT')) {
+      return this.checkNext('LPAREN')
     }
 
-    return this.check("IDENTIFIER") && this.checkNext("LPAREN")
+    return this.check('IDENTIFIER') && this.checkNext('LPAREN')
   }
 
   private isFunctionExpression(): boolean {
-    if (!this.check("LPAREN")) {
+    if (!this.check('LPAREN')) {
       return false
     }
 
     let index = this.current + 1
 
-    if (this.tokens[index]?.type === "RPAREN") {
-      return this.tokens[index + 1]?.type === "ARROW"
+    if (this.tokens[index]?.type === 'RPAREN') {
+      return this.tokens[index + 1]?.type === 'ARROW'
     }
 
     while (index < this.tokens.length) {
       const token = this.tokens[index]
 
-      if (token?.type !== "IDENTIFIER") {
+      if (token?.type !== 'IDENTIFIER') {
         return false
       }
 
@@ -692,13 +696,13 @@ export class Parser {
 
       const separator = this.tokens[index]
 
-      if (separator?.type === "COMMA") {
+      if (separator?.type === 'COMMA') {
         index += 1
         continue
       }
 
-      if (separator?.type === "RPAREN") {
-        return this.tokens[index + 1]?.type === "ARROW"
+      if (separator?.type === 'RPAREN') {
+        return this.tokens[index + 1]?.type === 'ARROW'
       }
 
       return false
@@ -751,7 +755,7 @@ export class Parser {
   }
 
   private isAtEnd(): boolean {
-    return this.peek().type === "EOF"
+    return this.peek().type === 'EOF'
   }
 
   private peek(): Token {

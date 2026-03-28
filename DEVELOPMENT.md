@@ -148,11 +148,11 @@ Turn source code into tokens.
 
 ```typescript
 type Token = {
-  type: TokenType;
-  value: string;
-  line: number;
-  column: number;
-};
+  type: TokenType
+  value: string
+  line: number
+  column: number
+}
 ```
 
 ---
@@ -190,7 +190,7 @@ type ASTNode =
   | DattebayoStatement
   | VictoryExpr
   | DefeatExpr
-  | InterpolatedString;
+  | InterpolatedString
 ```
 
 ### Tests to Write
@@ -253,24 +253,24 @@ Evaluate AST nodes. Tests feed full source strings through lexer + parser — no
 
 ```typescript
 type Environment = {
-  bindings: Map<string, Value>;
-  parent: Environment | null;
-};
+  bindings: Map<string, Value>
+  parent: Environment | null
+}
 ```
 
 ### Value Types
 
 ```typescript
 type Value =
-  | { type: "number"; value: number }
-  | { type: "string"; value: string }
-  | { type: "boolean"; value: boolean }
-  | { type: "poof" }
-  | { type: "list"; value: Value[] }
-  | { type: "object"; value: Map<string, Value> }
-  | { type: "function"; params: string[]; body: ASTNode; closure: Environment }
-  | { type: "victory"; value: Value }
-  | { type: "defeat"; value: Value };
+  | { type: 'number'; value: number }
+  | { type: 'string'; value: string }
+  | { type: 'boolean'; value: boolean }
+  | { type: 'poof' }
+  | { type: 'list'; value: Value[] }
+  | { type: 'object'; value: Map<string, Value> }
+  | { type: 'function'; params: string[]; body: ASTNode; closure: Environment }
+  | { type: 'victory'; value: Value }
+  | { type: 'defeat'; value: Value }
 ```
 
 ### Tests to Write
