@@ -38,7 +38,10 @@ export type Value =
 const POOF: Value = { type: 'poof' }
 
 class ReturnSignal {
-  constructor(readonly value: Value) {}
+  constructor(
+    readonly value: Value,
+    readonly env: Environment
+  ) {}
 }
 
 export class Environment {
@@ -83,19 +86,54 @@ export function interpret({
   output?: (line: string) => void
   source: string
 }): Value {
-  const program = parse({ source })
-  return evaluateProgram(program, createGlobalEnvironment(output))
+  return interpretWithEnvironment({
+    source,
+    env: createEnvironment({
+      output,
+    }),
+  }).value
 }
 
 export function evaluateProgram(
   program: Program,
   env: Environment = new Environment()
 ): Value {
+  return evaluateProgramWithEnvironment(program, env).value
+}
+
+export function createEnvironment({
+  output = (line: string) => {
+    console.log(line)
+  },
+}: {
+  output?: (line: string) => void
+} = {}): Environment {
+  return createGlobalEnvironment(output)
+}
+
+export function interpretWithEnvironment({
+  source,
+  env,
+}: {
+  env: Environment
+  source: string
+}): EvalResult {
+  const program = parse({ source })
+  return evaluateProgramWithEnvironment(program, env)
+}
+
+function evaluateProgramWithEnvironment(
+  program: Program,
+  env: Environment
+): EvalResult {
   try {
-    return evaluateStatements(program.body, env).value
+    return evaluateStatements(program.body, env)
   } catch (error) {
     if (error instanceof ReturnSignal) {
-      return error.value
+      return {
+        value: error.value,
+        env: error.env,
+      }
     }
 
     throw error
@@ -142,7 +180,7 @@ function evaluateStatement(statement: Statement, env: Environment): EvalResult {
     }
     case 'DattebayoStatement': {
       const value = evaluateExpression(statement.value, env)
-      throw new ReturnSignal(value)
+      throw new ReturnSignal(value, env)
     }
     default: {
       return {

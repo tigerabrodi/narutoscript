@@ -12,6 +12,12 @@ To run a file:
 bun run src/index.ts examples/hello.naru
 ```
 
+To start the REPL:
+
+```bash
+bun run src/index.ts
+```
+
 More examples:
 
 ```bash
