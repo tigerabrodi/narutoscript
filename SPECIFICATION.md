@@ -401,10 +401,10 @@ jutsu totalPower = combine(powers, (a, b) -> a + b, 0)
 say(`Total power of all warriors: {totalPower}`)
 
 --- Find strong warriors
-jutsu strong = pick(warriors, (w) -> w.power > 7500)
+jutsu strongWarriors = pick(warriors, (w) -> w.power > 7500)
 
 say(`Warriors over 7500 power:`)
-train warrior in strong {
+train warrior in strongWarriors {
   say(`  - {warrior.name}: {warrior.power}`)
 }
 
