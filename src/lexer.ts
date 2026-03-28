@@ -293,7 +293,7 @@ export class Lexer {
   }
 
   private advance(): string {
-    const c = this.source[this.current]
+    const c = this.source[this.current] ?? '\0'
     this.current++
     this.column++
     return c
@@ -301,12 +301,12 @@ export class Lexer {
 
   private peek(): string {
     if (this.isAtEnd()) return '\0'
-    return this.source[this.current]
+    return this.source[this.current] ?? '\0'
   }
 
   private peekNext(): string {
     if (this.current + 1 >= this.source.length) return '\0'
-    return this.source[this.current + 1]
+    return this.source[this.current + 1] ?? '\0'
   }
 
   private addToken(type: TokenType, value?: string): void {

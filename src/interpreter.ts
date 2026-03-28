@@ -331,23 +331,32 @@ function isEqual(left: Value, right: Value): boolean {
 
   switch (left.type) {
     case 'number':
+      return left.value === (right as Extract<Value, { type: 'number' }>).value
     case 'string':
+      return left.value === (right as Extract<Value, { type: 'string' }>).value
     case 'boolean':
-      return left.value === right.value
+      return left.value === (right as Extract<Value, { type: 'boolean' }>).value
     case 'poof':
       return true
-    case 'list':
+    case 'list': {
+      const rightList = right as Extract<Value, { type: 'list' }>
+
       return (
-        left.value.length === right.value.length &&
-        left.value.every((item, index) => isEqual(item, right.value[index]!))
+        left.value.length === rightList.value.length &&
+        left.value.every((item, index) =>
+          isEqual(item, rightList.value[index]!)
+        )
       )
+    }
     case 'object': {
-      if (left.value.size !== right.value.size) {
+      const rightObject = right as Extract<Value, { type: 'object' }>
+
+      if (left.value.size !== rightObject.value.size) {
         return false
       }
 
       for (const [key, value] of left.value.entries()) {
-        const otherValue = right.value.get(key)
+        const otherValue = rightObject.value.get(key)
 
         if (!otherValue || !isEqual(value, otherValue)) {
           return false
@@ -357,8 +366,15 @@ function isEqual(left: Value, right: Value): boolean {
       return true
     }
     case 'victory':
+      return isEqual(
+        left.value,
+        (right as Extract<Value, { type: 'victory' }>).value
+      )
     case 'defeat':
-      return isEqual(left.value, right.value)
+      return isEqual(
+        left.value,
+        (right as Extract<Value, { type: 'defeat' }>).value
+      )
     case 'function':
       return left === right
     default:

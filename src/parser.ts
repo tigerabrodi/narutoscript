@@ -576,10 +576,17 @@ export class Parser {
     const value = this.parseExpression()
     this.consume('RPAREN', "Expected ')' after result value")
 
-    return {
-      type,
-      value,
+    if (type === 'VictoryExpr') {
+      return {
+        type: 'VictoryExpr',
+        value,
+      } satisfies VictoryExpr
     }
+
+    return {
+      type: 'DefeatExpr',
+      value,
+    } satisfies DefeatExpr
   }
 
   private parseListLiteral() {
