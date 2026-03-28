@@ -370,15 +370,4 @@ train warrior in elites {
 say(`Elite total {combine(elites, (acc, warrior) -> acc + warrior.power, 0)}`)
 ```
 
-## Development
-
-```bash
-bun install
-bun test
-bun tsc
-bun lint
-bun run format
-```
-
-Full development plan and phase breakdown in [DEVELOPMENT.md](./DEVELOPMENT.md).
 Language specification in [SPECIFICATION.md](SPECIFICATION.md).
