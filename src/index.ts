@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 
 import { existsSync, readFileSync } from 'node:fs'
+import { stdout as consoleOutput, stdin as input } from 'node:process'
 import { createInterface } from 'node:readline/promises'
-import { stdin as input, stdout as consoleOutput } from 'node:process'
 import { BUILTIN_NAMES, renderValue } from './builtins'
 import {
   createEnvironment,
