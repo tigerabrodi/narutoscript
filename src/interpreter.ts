@@ -171,10 +171,40 @@ function evaluateExpression(expression: Expression, env: Environment): Value {
         value: evaluateExpression(expression.value, env),
       }
     case 'ListLiteral':
+      return {
+        type: 'list',
+        value: expression.elements.map((element) =>
+          evaluateExpression(element, env)
+        ),
+      }
     case 'ObjectLiteral':
+      return {
+        type: 'object',
+        value: expression.entries.reduce((map, entry) => {
+          if (entry.type === 'SpreadProperty') {
+            const spreadValue = evaluateExpression(entry.argument, env)
+
+            if (spreadValue.type !== 'object') {
+              throw new Error('Can only spread objects into objects')
+            }
+
+            for (const [key, value] of spreadValue.value.entries()) {
+              map.set(key, value)
+            }
+
+            return map
+          }
+
+          map.set(entry.key, evaluateExpression(entry.value, env))
+          return map
+        }, new Map<string, Value>()),
+      }
     case 'PropertyAccess':
+      return evaluatePropertyAccess(expression, env)
     case 'WhenExpr':
+      return evaluateWhenExpr(expression, env)
     case 'TrainLoop':
+      return evaluateTrainLoop(expression, env)
     case 'ReadExpr':
       throw new Error(`Runtime feature not implemented yet: ${expression.type}`)
     default:
@@ -292,6 +322,56 @@ function evaluateFunctionCall(
 
 function evaluateBlock(block: Block, env: Environment): Value {
   return evaluateStatements(block.body, env.child()).value
+}
+
+function evaluatePropertyAccess(
+  expression: Extract<Expression, { type: 'PropertyAccess' }>,
+  env: Environment
+): Value {
+  const object = evaluateExpression(expression.object, env)
+
+  if (object.type !== 'object') {
+    throw new Error('Can only access properties on objects')
+  }
+
+  return object.value.get(expression.property) ?? POOF
+}
+
+function evaluateWhenExpr(
+  expression: Extract<Expression, { type: 'WhenExpr' }>,
+  env: Environment
+): Value {
+  const condition = evaluateExpression(expression.condition, env)
+
+  if (expectBoolean(condition, 'when')) {
+    return evaluateBlock(expression.thenBranch, env)
+  }
+
+  if (expression.otherwiseBranch !== null) {
+    return evaluateBlock(expression.otherwiseBranch, env)
+  }
+
+  return POOF
+}
+
+function evaluateTrainLoop(
+  expression: Extract<Expression, { type: 'TrainLoop' }>,
+  env: Environment
+): Value {
+  const iterable = evaluateExpression(expression.iterable, env)
+
+  if (iterable.type !== 'list') {
+    throw new Error('Can only train over lists')
+  }
+
+  let lastValue: Value = POOF
+
+  for (const item of iterable.value) {
+    const loopEnv = env.child().define(expression.iterator.name, item)
+    lastValue = evaluateBlock(expression.body, loopEnv)
+  }
+
+  return lastValue
 }
 
 function numberValue(value: number): Value {
