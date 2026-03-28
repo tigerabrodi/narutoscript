@@ -1,3 +1,5 @@
+#!/usr/bin/env bun
+
 import { existsSync, readFileSync } from 'node:fs'
 import { createInterface } from 'node:readline/promises'
 import { stdin as input, stdout as consoleOutput } from 'node:process'
@@ -18,6 +20,17 @@ const EXAMPLE_FILES = [
   'examples/ninja-power-calculator.naru',
   'examples/all-features.naru',
 ] as const
+
+const ANSI = {
+  blue: '\u001b[34m',
+  cyan: '\u001b[36m',
+  dim: '\u001b[90m',
+  green: '\u001b[32m',
+  magenta: '\u001b[35m',
+  red: '\u001b[31m',
+  reset: '\u001b[0m',
+  yellow: '\u001b[33m',
+} as const
 
 export function run({
   output = (line: string) => {
@@ -58,9 +71,11 @@ export function createReplSession({
   errorOutput = (line: string) => {
     console.error(line)
   },
+  useColors = false,
 }: {
   errorOutput?: (line: string) => void
   output?: (line: string) => void
+  useColors?: boolean
 }) {
   let env = createEnvironment({
     output,
@@ -97,7 +112,7 @@ export function createReplSession({
         env = result.env
 
         if (shouldPrintReplValue(program, result.value)) {
-          output(renderValue(result.value))
+          output(formatReplValue(result.value, useColors))
         }
       } catch (error) {
         const message =
@@ -143,7 +158,7 @@ export function createReplSession({
         }
 
         for (const [name, value] of userBindings) {
-          output(`${name} = ${renderValue(value)}`)
+          output(`${name} = ${formatReplValue(value, useColors)}`)
         }
 
         return { exit: false }
@@ -159,7 +174,7 @@ export function createReplSession({
             source: `type(${argument})`,
             env,
           })
-          output(renderValue(result.value))
+          output(formatReplValue(result.value, useColors))
         } catch (error) {
           const message =
             error instanceof Error
@@ -213,10 +228,12 @@ export async function runRepl({
   output = (line: string) => {
     console.log(line)
   },
+  useColors,
 }: {
   errorOutput?: (line: string) => void
   inputLines?: AsyncIterable<string> | Iterable<string>
   output?: (line: string) => void
+  useColors?: boolean
 }): Promise<number> {
   output(`NarutoScript v${VERSION} REPL`)
   output('Type :help for REPL commands. Type exit to quit.')
@@ -224,6 +241,7 @@ export async function runRepl({
   const session = createReplSession({
     output,
     errorOutput,
+    useColors: useColors ?? inputLines === undefined,
   })
 
   if (inputLines !== undefined) {
@@ -269,11 +287,13 @@ export async function runCli({
   output = (line: string) => {
     console.log(line)
   },
+  useColors,
 }: {
   args: string[]
   errorOutput?: (line: string) => void
   input?: AsyncIterable<string> | Iterable<string>
   output?: (line: string) => void
+  useColors?: boolean
 }): Promise<number> {
   const command = args[0]
 
@@ -282,6 +302,7 @@ export async function runCli({
       inputLines: input,
       output,
       errorOutput,
+      useColors,
     })
   }
 
@@ -305,6 +326,7 @@ export async function runCli({
       inputLines: input,
       output,
       errorOutput,
+      useColors,
     })
   }
 
@@ -367,8 +389,14 @@ function getCliHelpLines(): string[] {
   return [
     `NarutoScript v${VERSION}`,
     'Usage.',
-    '  bun run src/index.ts <file.naru>',
-    '  bun run src/index.ts run <file.naru>',
+    '  narutoscript <file>',
+    '  narutoscript run <file>',
+    '  narutoscript repl',
+    '  narutoscript examples',
+    '  narutoscript --help',
+    '  ',
+    '  bun run src/index.ts <file>',
+    '  bun run src/index.ts run <file>',
     '  bun run src/index.ts repl',
     '  bun run src/index.ts examples',
     '  bun run src/index.ts --help',
@@ -378,6 +406,9 @@ function getCliHelpLines(): string[] {
     '  examples. List example programs.',
     '  help. Show this help text.',
     'Examples.',
+    '  narutoscript run examples/hello.naru',
+    '  narutoscript repl',
+    '  ',
     ...EXAMPLE_FILES,
   ]
 }
@@ -393,6 +424,11 @@ function getReplHelpLines(): string[] {
     '  :load <file>. Load a file into the current session.',
     '  :reset. Clear user bindings and start fresh.',
     '  exit or :exit. Leave the REPL.',
+    'Try.',
+    '  say(`Believe it`)',
+    '  jutsu name = `Naruto`',
+    '  say(`Hello {name}`)',
+    '  :type [1, 2, 3]',
   ]
 }
 
@@ -402,6 +438,36 @@ function printLines(
 ): void {
   for (const line of lines) {
     output(line)
+  }
+}
+
+function formatReplValue(value: Value, useColors: boolean): string {
+  const rendered = renderValue(value)
+
+  if (!useColors) {
+    return rendered
+  }
+
+  switch (value.type) {
+    case 'number':
+      return colorize(rendered, ANSI.yellow)
+    case 'string':
+      return colorize(rendered, ANSI.green)
+    case 'boolean':
+      return colorize(rendered, ANSI.cyan)
+    case 'poof':
+      return colorize(rendered, ANSI.dim)
+    case 'list':
+    case 'object':
+      return colorize(rendered, ANSI.blue)
+    case 'function':
+    case 'builtin':
+    case 'victory':
+      return colorize(rendered, ANSI.magenta)
+    case 'defeat':
+      return colorize(rendered, ANSI.red)
+    default:
+      return rendered
   }
 }
 
@@ -448,6 +514,10 @@ function ensureFileExists(filePath: string): void {
   throw new Error(
     `Could not find file '${filePath}'. Try bun run src/index.ts examples or bun run src/index.ts --help`
   )
+}
+
+function colorize(value: string, color: string): string {
+  return `${color}${value}${ANSI.reset}`
 }
 
 async function* toAsyncIterable(

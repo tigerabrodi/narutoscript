@@ -1,6 +1,9 @@
 {
   "name": "narutoscript",
   "version": "0.1.0",
+  "bin": {
+    "narutoscript": "./src/index.ts"
+  },
   "main": "src/index.ts",
   "type": "module",
   "scripts": {

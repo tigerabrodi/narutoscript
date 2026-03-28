@@ -6,12 +6,27 @@ async function runRepl(lines: string[]): Promise<{
   exitCode: number
   output: string[]
 }> {
+  return runReplWithOptions({ lines })
+}
+
+async function runReplWithOptions({
+  lines,
+  useColors = false,
+}: {
+  lines: string[]
+  useColors?: boolean
+}): Promise<{
+  errors: string[]
+  exitCode: number
+  output: string[]
+}> {
   const output: string[] = []
   const errors: string[] = []
 
   const exitCode = await runCli({
     args: [],
     input: lines,
+    useColors,
     output: (line) => {
       output.push(line)
     },
@@ -90,6 +105,7 @@ describe('REPL', () => {
     expect(result.output.join('\n')).toMatch(/:builtins/i)
     expect(result.output.join('\n')).toMatch(/:load <file>/i)
     expect(result.output.join('\n')).toMatch(/examples\/hello\.naru/i)
+    expect(result.output.join('\n')).toMatch(/say\(`Believe it`\)/i)
     expect(result.output.join('\n')).toMatch(
       /say, clone, pick, combine, length, type/i
     )
@@ -130,6 +146,19 @@ describe('REPL', () => {
       'Loaded examples/hello.naru',
       'Naruto',
     ])
+    expect(result.errors).toEqual([])
+  })
+
+  it('can color REPL values when colors are enabled', async () => {
+    const result = await runReplWithOptions({
+      lines: ['42', '`Naruto`', 'true', 'exit'],
+      useColors: true,
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('\u001b[33m42\u001b[0m')
+    expect(result.output).toContain('\u001b[32mNaruto\u001b[0m')
+    expect(result.output).toContain('\u001b[36mtrue\u001b[0m')
     expect(result.errors).toEqual([])
   })
 })

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'bun:test'
 import { runCli } from '../src/index'
 
@@ -37,6 +38,24 @@ describe('CLI', () => {
     expect(result.output.join('\n')).toMatch(/run <file>/i)
     expect(result.output.join('\n')).toMatch(/repl/i)
     expect(result.output.join('\n')).toMatch(/examples/i)
+    expect(result.output.join('\n')).toMatch(/narutoscript run <file>/i)
+  })
+
+  it('exposes a narutoscript bin command', () => {
+    const packageJson = JSON.parse(
+      readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+    ) as {
+      bin?: Record<string, string>
+    }
+    const entrySource = readFileSync(
+      new URL('../src/index.ts', import.meta.url),
+      'utf8'
+    )
+
+    expect(packageJson.bin).toEqual({
+      narutoscript: './src/index.ts',
+    })
+    expect(entrySource.startsWith('#!/usr/bin/env bun')).toBe(true)
   })
 
   it('lists example programs', async () => {
