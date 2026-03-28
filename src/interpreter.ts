@@ -2,6 +2,7 @@ import type {
   BinaryExpr,
   Block,
   Expression,
+  Pattern,
   Program,
   Statement,
   UnaryExpr,
@@ -206,7 +207,7 @@ function evaluateExpression(expression: Expression, env: Environment): Value {
     case 'TrainLoop':
       return evaluateTrainLoop(expression, env)
     case 'ReadExpr':
-      throw new Error(`Runtime feature not implemented yet: ${expression.type}`)
+      return evaluateReadExpr(expression, env)
     default:
       return assertNever(expression)
   }
@@ -372,6 +373,175 @@ function evaluateTrainLoop(
   }
 
   return lastValue
+}
+
+function evaluateReadExpr(
+  expression: Extract<Expression, { type: 'ReadExpr' }>,
+  env: Environment
+): Value {
+  const value = evaluateExpression(expression.value, env)
+
+  for (const arm of expression.arms) {
+    const matchedEnv = matchPattern(arm.pattern, value, env)
+
+    if (matchedEnv === null) {
+      continue
+    }
+
+    if (arm.guard !== null) {
+      const guardValue = evaluateExpression(arm.guard, matchedEnv)
+
+      if (!expectBoolean(guardValue, 'read guard')) {
+        continue
+      }
+    }
+
+    if (arm.body.type === 'Block') {
+      return evaluateBlock(arm.body, matchedEnv)
+    }
+
+    return evaluateExpression(arm.body, matchedEnv)
+  }
+
+  throw new Error('No pattern matched')
+}
+
+function matchPattern(
+  pattern: Pattern,
+  value: Value,
+  env: Environment
+): Environment | null {
+  switch (pattern.type) {
+    case 'NumberPattern':
+      return value.type === 'number' && value.value === pattern.value
+        ? env
+        : null
+    case 'StringPattern':
+      return value.type === 'string' && value.value === pattern.value
+        ? env
+        : null
+    case 'BooleanPattern':
+      return value.type === 'boolean' && value.value === pattern.value
+        ? env
+        : null
+    case 'PoofPattern':
+      return value.type === 'poof' ? env : null
+    case 'IdentifierPattern':
+      return env.define(pattern.name, value)
+    case 'ListPattern':
+      return matchListPattern(pattern, value, env)
+    case 'ObjectPattern':
+      return matchObjectPattern(pattern, value, env)
+    case 'ConstructorPattern':
+      return matchConstructorPattern(pattern, value, env)
+    case 'WildcardPattern':
+      return env
+    default:
+      return assertNever(pattern)
+  }
+}
+
+function matchListPattern(
+  pattern: Extract<Pattern, { type: 'ListPattern' }>,
+  value: Value,
+  env: Environment
+): Environment | null {
+  if (value.type !== 'list') {
+    return null
+  }
+
+  if (value.value.length < pattern.elements.length) {
+    return null
+  }
+
+  if (pattern.rest === null && value.value.length !== pattern.elements.length) {
+    return null
+  }
+
+  let currentEnv = env
+
+  for (let index = 0; index < pattern.elements.length; index += 1) {
+    const nextEnv = matchPattern(
+      pattern.elements[index]!,
+      value.value[index]!,
+      currentEnv
+    )
+
+    if (nextEnv === null) {
+      return null
+    }
+
+    currentEnv = nextEnv
+  }
+
+  if (pattern.rest !== null) {
+    const restValue: Value = {
+      type: 'list',
+      value: value.value.slice(pattern.elements.length),
+    }
+
+    return matchPattern(pattern.rest, restValue, currentEnv)
+  }
+
+  return currentEnv
+}
+
+function matchObjectPattern(
+  pattern: Extract<Pattern, { type: 'ObjectPattern' }>,
+  value: Value,
+  env: Environment
+): Environment | null {
+  if (value.type !== 'object') {
+    return null
+  }
+
+  let currentEnv = env
+
+  for (const property of pattern.properties) {
+    if (!value.value.has(property.key)) {
+      return null
+    }
+
+    const propertyValue = value.value.get(property.key)
+
+    if (propertyValue === undefined) {
+      return null
+    }
+
+    const nextEnv = matchPattern(property.pattern, propertyValue, currentEnv)
+
+    if (nextEnv === null) {
+      return null
+    }
+
+    currentEnv = nextEnv
+  }
+
+  return currentEnv
+}
+
+function matchConstructorPattern(
+  pattern: Extract<Pattern, { type: 'ConstructorPattern' }>,
+  value: Value,
+  env: Environment
+): Environment | null {
+  if (pattern.name === 'victory') {
+    if (value.type !== 'victory' || pattern.args.length !== 1) {
+      return null
+    }
+
+    return matchPattern(pattern.args[0]!, value.value, env)
+  }
+
+  if (pattern.name === 'defeat') {
+    if (value.type !== 'defeat' || pattern.args.length !== 1) {
+      return null
+    }
+
+    return matchPattern(pattern.args[0]!, value.value, env)
+  }
+
+  return null
 }
 
 function numberValue(value: number): Value {
